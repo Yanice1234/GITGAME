@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>體感星星大冒險 - 手掌控制版</title>
+    <!-- 引入 MediaPipe Hands 與 Camera Utils -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+
+    <style>
+        :root {
+            --primary-color: #00d2ff;
+            --accent-color: #ffd700;
+            --danger-color: #ff4757;
+            --bg-color: #1e272e;
+            --ui-bg: rgba(0, 0, 0, 0.85);
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden; /* 防止捲動 */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        /* 遊戲容器 */
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            max-width: 1280px;
+            max-height: 720px;
+            background: #000;
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+            border-radius: 8px;
+        }
+
+        /* 攝影機與畫布 */
+        .camera-view {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1); /* 鏡像翻轉，讓操作更直覺 */
+            opacity: 0.3; /* 讓背景暗一點，突出遊戲元素 */
+            z-index: 1;
+        }
+
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+        }
+
+        /* UI 層 */
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            pointer-events: none; /* 讓點擊穿透到按鈕 */
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        /* HUD (分數板) */
+        #hud {
+            display: flex;
+            justify-content: space-between;
+            font-size: 24px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+        }
+
+        .score-box span {
+            color: var(--accent-color);
+        }
+
+        /* 載入與選單覆蓋層 */
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--ui-bg);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 20;
+            pointer-events: auto;
+            transition: opacity 0.3s;
+        }
+
+        .hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        h1 {
+            font-size: 48px;
+            margin-bottom: 10px;
+            color: var(--primary-color);
+            text-shadow: 0 0 20px var(--primary-color);
+            text-align: center;
+        }
+
+        p {
+            font-size: 18px;
+            color: #ddd;
+            margin-bottom: 30px;
+            max-width: 600px;
+            text-align: center;
+            line-height: 1.6;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, var(--primary-color), #007bff);
+            border: none;
+            padding: 15px 40px;
+            color: white;
+            font-size: 24px;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(0, 210, 255, 0.4);
+            transition: transform 0.2s, box-shadow 0.2s;
+            font-weight: bold;
+        }
+
+        .btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 25px rgba(0, 210, 255, 0.6);
+        }
+
+        .btn:disabled {
+            background: #555;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        /* 狀態指示器 */
+        #status-indicator {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.7);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: #ccc;
+        }
+
+        .dot.loading { background-color: #f1c40f; animation: blink 1s infinite; }
+        .dot.ready { background-color: #2ecc71; }
+        .dot.error { background-color: #e74c3c; }
+
+        @keyframes blink {
+            50% { opacity: 0.4; }
+        }
+
+        /* 手勢教學圖示 */
+        .tutorial-icons {
+            display: flex;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        .icon-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-size: 14px;
+            color: #aaa;
+        }
+        .icon-box {
+            width: 60px;
+            height: 60px;
+            border: 2px solid #555;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 30px;
+        }
+
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <!-- 攝影機影像 -->
+    <video class="camera-view" id="input-video" playsinline></video>
+    
+    <!-- 遊戲畫布 -->
+    <canvas id="game-canvas"></canvas>
+
+    <!-- UI 狀態層 -->
+    <div id="ui-layer">
+        <div id="status-indicator">
+            <div class="dot loading" id="status-dot"></div>
+            <span id="status-text">正在載入 AI 模型...</span>
+        </div>
+
+        <div id="hud" class="hidden">
+            <div>分數: <span id="score-display">0</span></div>
+            <div>最高分: <span id="highscore-display">0</span></div>
+        </div>
+    </div>
+
+    <!-- 開始/載入畫面 -->
+    <div id="start-screen" class="overlay">
+        <h1>體感星星大冒險</h1>
+        <p>
+            請允許使用攝影機。遊戲中請舉起一隻手，<br>
+            使用 <b>食指指尖</b> 控制藍色光球移動。
+        </p>
+        
+        <div class="tutorial-icons">
+            <div class="icon-item">
+                <div class="icon-box" style="border-color: var(--primary-color);">👆</div>
+                <span>食指控制</span>
+            </div>
+            <div class="icon-item">
+                <div class="icon-box" style="border-color: var(--accent-color);">⭐</div>
+                <span>收集星星</span>
+            </div>
+            <div class="icon-item">
+                <div class="icon-box" style="border-color: var(--danger-color);">🔴</div>
+                <span>避開紅球</span>
+            </div>
+        </div>
+
+        <button id="start-btn" class="btn" disabled>載入中...</button>
+    </div>
+
+    <!-- 遊戲結束畫面 -->
+    <div id="game-over-screen" class="overlay hidden">
+        <h1 style="color: var(--danger-color)">遊戲結束</h1>
+        <p>你的得分: <span id="final-score" style="color: white; font-size: 24px; font-weight: bold;">0</span></p>
+        <button id="restart-btn" class="btn">再玩一次</button>
+    </div>
+</div>
+
+<script>
+    // --- 遊戲設定與變數 ---
+    const videoElement = document.getElementById('input-video');
+    const canvasElement = document.getElementById('game-canvas');
+    const canvasCtx = canvasElement.getContext('2d');
+    
+    // UI 元素
+    const startScreen = document.getElementById('start-screen');
+    const gameOverScreen = document.getElementById('game-over-screen');
+    const hud = document.getElementById('hud');
+    const scoreDisplay = document.getElementById('score-display');
+    const highScoreDisplay = document.getElementById('highscore-display');
+    const finalScoreDisplay = document.getElementById('final-score');
+    const startBtn = document.getElementById('start-btn');
+    const restartBtn = document.getElementById('restart-btn');
+    const statusDot = document.getElementById('status-dot');
+    const statusText = document.getElementById('status-text');
+
+    let isGameRunning = false;
+    let score = 0;
+    let highScore = localStorage.getItem('handGameHighScore') || 0;
+    let lastTime = 0;
+
+    // 玩家設定
+    const player = {
+        x: window.innerWidth / 2,
+        y: window.innerHeight / 2,
+        radius: 20,
+        color: '#00d2ff',
+        targetX: window.innerWidth / 2, // 手勢目標位置
+        targetY: window.innerHeight / 2
+    };
+
+    // 遊戲物件陣列
+    let stars = [];
+    let obstacles = [];
+    
+    // 生成計時器
+    let starTimer = 0;
+    let obstacleTimer = 0;
+    
+    // 難度調整
+    let obstacleSpeedMultiplier = 1;
+
+    // --- MediaPipe 初始化 ---
+    const hands = new Hands({locateFile: (file) => {
+        return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+    }});
+
+    hands.setOptions({
+        maxNumHands: 1,
+        modelComplexity: 1,
+        minDetectionConfidence: 0.5,
+        minTrackingConfidence: 0.5
+    });
+
+    hands.onResults(onHandsResults);
+
+    // 設定攝影機
+    const camera = new Camera(videoElement, {
+        onFrame: async () => {
+            await hands.send({image: videoElement});
+        },
+        width: 1280,
+        height: 720
+    });
+
+    // 啟動攝影機
+    camera.start()
+        .then(() => {
+            console.log("攝影機已啟動");
+        })
+        .catch(err => {
+            console.error("攝影機錯誤:", err);
+            statusDot.className = 'dot error';
+            statusText.innerText = "無法啟動攝影機";
+        });
+
+    // 當模型準備好時 (MediaPipe 沒有直接的 'ready' 事件，我們用 onResults 第一次觸發判斷)
+    let isModelLoaded = false;
+
+    // --- 遊戲邏輯 ---
+
+    function onHandsResults(results) {
+        if (!isModelLoaded) {
+            isModelLoaded = true;
+            statusDot.className = 'dot ready';
+            statusText.innerText = "系統準備就緒";
+            startBtn.disabled = false;
+            startBtn.innerText = "開始遊戲";
+        }
+
+        if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+            const landmarks = results.multiHandLandmarks[0];
+            
+            // 取得食指指尖 (Index Finger Tip - ID: 8)
+            const indexFingerTip = landmarks[8];
+            
+            // 注意：MediaPipe 的 x 坐標是 0 (左) 到 1 (右)。
+            // 因為我們在 CSS 把影片翻轉了 (scaleX(-1))，視覺上右邊是 x=0。
+            // 為了讓手往右移時，遊戲角色也往右移，我們需要對 x 做鏡像處理。
+            // 原始影像 x: 0->1. 鏡像後: 1->0.
+            
+            player.targetX = (1 - indexFingerTip.x) * canvasElement.width;
+            player.targetY = indexFingerTip.y * canvasElement.height;
+        }
+    }
+
+    // 平滑移動
+    function lerp(start, end, factor) {
+        return start + (end - start) * factor;
+    }
+
+    function resizeCanvas() {
+        const container = document.getElementById('game-container');
+        canvasElement.width = container.clientWidth;
+        canvasElement.height = container.clientHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+    highScoreDisplay.innerText = highScore;
+
+    // 遊戲迴圈
+    function gameLoop(timestamp) {
+        if (!isGameRunning) return;
+
+        const deltaTime = timestamp - lastTime;
+        lastTime = timestamp;
+
+        // 清除畫布
+        canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+
+        // 更新玩家位置 (Lerp 平滑處理)
+        player.x = lerp(player.x, player.targetX, 0.2);
+        player.y = lerp(player.y, player.targetY, 0.2);
+
+        // 繪製玩家
+        canvasCtx.beginPath();
+        canvasCtx.arc(player.x, player.y, player.radius, 0, 2 * Math.PI);
+        canvasCtx.fillStyle = player.color;
+        canvasCtx.shadowBlur = 20;
+        canvasCtx.shadowColor = player.color;
+        canvasCtx.fill();
+        canvasCtx.shadowBlur = 0;
+        canvasCtx.closePath();
+
+        // 繪製手勢追蹤點 (可選，視覺輔助)
+        canvasCtx.beginPath();
+        canvasCtx.arc(player.targetX, player.targetY, 5, 0, 2 * Math.PI);
+        canvasCtx.fillStyle = "rgba(255, 255, 255, 0.5)";
+        canvasCtx.fill();
+        canvasCtx.closePath();
+
+        // 處理星星
+        starTimer += deltaTime;
+        if (starTimer > 1000) { // 每秒嘗試生成星星
+            spawnStar();
+            starTimer = 0;
+        }
+
+        for (let i = stars.length - 1; i >= 0; i--) {
+            const s = stars[i];
+            // 繪製星星 (簡化為金色圓形)
+            canvasCtx.beginPath();
+            canvasCtx.arc(s.x, s.y, s.radius, 0, 2 * Math.PI);
+            canvasCtx.fillStyle = '#ffd700';
+            canvasCtx.fill();
+            canvasCtx.strokeStyle = '#fff';
+            canvasCtx.lineWidth = 2;
+            canvasCtx.stroke();
+            canvasCtx.closePath();
+
+            // 碰撞檢測 (玩家 vs 星星)
+            const dist = Math.hypot(player.x - s.x, player.y - s.y);
+            if (dist < player.radius + s.radius) {
+                // 收集成功
+                score += 10;
+                scoreDisplay.innerText = score;
+                createParticles(s.x, s.y, '#ffd700');
+                stars.splice(i, 1);
+                
+                // 難度隨分數提升
+                if (score % 50 === 0) {
+                    obstacleSpeedMultiplier += 0.1;
+                }
+            }
+        }
+
+        // 處理障礙物
+        obstacleTimer += deltaTime;
+        // 生成頻率隨難度略微加快，但有上限
+        let spawnRate = Math.max(500, 1000 - (score * 2)); 
+        if (obstacleTimer > spawnRate) {
+            spawnObstacle();
+            obstacleTimer = 0;
+        }
+
+        for (let i = obstacles.length - 1; i >= 0; i--) {
+            const obs = obstacles[i];
+            obs.y += obs.speed * obstacleSpeedMultiplier;
+            obs.rotation += 0.05;
+
+            // 繪製障礙物 (紅色帶刺球體感)
+            canvasCtx.save();
+            canvasCtx.translate(obs.x, obs.y);
+            canvasCtx.rotate(obs.rotation);
+            canvasCtx.beginPath();
+            // 畫一個簡單的多邊形模擬刺
+            const spikes = 8;
+            const outerRadius = obs.radius;
+            const innerRadius = obs.radius / 2;
+            for(let j=0; j<spikes*2; j++){
+                const r = (j%2 === 0) ? outerRadius : innerRadius;
+                const currAngle = (Math.PI / spikes) * j;
+                const x = Math.cos(currAngle) * r;
+                const y = Math.sin(currAngle) * r;
+                if(j===0) canvasCtx.moveTo(x, y);
+                else canvasCtx.lineTo(x, y);
+            }
+            canvasCtx.closePath();
+            canvasCtx.fillStyle = '#ff4757';
+            canvasCtx.fill();
+            canvasCtx.restore();
+
+            // 移除超出畫面的障礙物
+            if (obs.y > canvasElement.height + obs.radius) {
+                obstacles.splice(i, 1);
+                continue;
+            }
+
+            // 碰撞檢測 (玩家 vs 障礙物)
+            // 為了公平一點，障礙物碰撞判定稍微比視覺小一點
+            const dist = Math.hypot(player.x - obs.x, player.y - obs.y);
+            if (dist < (player.radius + obs.radius * 0.8)) {
+                gameOver();
+                return;
+            }
+        }
+
+        // 粒子效果更新
+        updateAndDrawParticles();
+
+        requestAnimationFrame(gameLoop);
+    }
+
+    // --- 生成器 ---
+
+    function spawnStar() {
+        if (stars.length > 3) return; // 限制同時存在的數量
+        stars.push({
+            x: Math.random() * (canvasElement.width - 40) + 20,
+            y: Math.random() * (canvasElement.height - 40) + 20,
+            radius: 15
+        });
+    }
+
+    function spawnObstacle() {
+        const radius = Math.random() * 15 + 15; // 15~30
+        obstacles.push({
+            x: Math.random() * canvasElement.width,
+            y: -radius,
+            radius: radius,
+            speed: Math.random() * 3 + 2, // 基礎速度
+            rotation: 0
+        });
+    }
+
+    // --- 粒子系統 (視覺效果) ---
+    let particles = [];
+    function createParticles(x, y, color) {
+        for (let i = 0; i < 8; i++) {
+            particles.push({
+                x: x,
+                y: y,
+                vx: (Math.random() - 0.5) * 5,
+                vy: (Math.random() - 0.5) * 5,
+                life: 1.0,
+                color: color
+            });
+        }
+    }
+
+    function updateAndDrawParticles() {
+        for (let i = particles.length - 1; i >= 0; i--) {
+            let p = particles[i];
+            p.x += p.vx;
+            p.y += p.vy;
+            p.life -= 0.05;
+            
+            if (p.life <= 0) {
+                particles.splice(i, 1);
+            } else {
+                canvasCtx.globalAlpha = p.life;
+                canvasCtx.fillStyle = p.color;
+                canvasCtx.beginPath();
+                canvasCtx.arc(p.x, p.y, 3, 0, Math.PI*2);
+                canvasCtx.fill();
+                canvasCtx.globalAlpha = 1.0;
+            }
+        }
+    }
+
+    // --- 遊戲流程控制 ---
+
+    function startGame() {
+        startScreen.classList.add('hidden');
+        gameOverScreen.classList.add('hidden');
+        hud.classList.remove('hidden');
+        
+        isGameRunning = true;
+        score = 0;
+        obstacleSpeedMultiplier = 1;
+        scoreDisplay.innerText = score;
+        
+        stars = [];
+        obstacles = [];
+        particles = [];
+
+        // 初始生成一個星星
+        spawnStar();
+
+        lastTime = performance.now();
+        requestAnimationFrame(gameLoop);
+    }
+
+    function gameOver() {
+        isGameRunning = false;
+        finalScoreDisplay.innerText = score;
+        
+        if (score > highScore) {
+            highScore = score;
+            localStorage.setItem('handGameHighScore', highScore);
+            highScoreDisplay.innerText = highScore;
+        }
+
+        gameOverScreen.classList.remove('hidden');
+        hud.classList.add('hidden');
+    }
+
+    // --- 事件監聽 ---
+    startBtn.addEventListener('click', startGame);
+    restartBtn.addEventListener('click', startGame);
+
+</script>
+</body>
+</html>
