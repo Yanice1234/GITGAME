@@ -520,10 +520,15 @@
                         const cellSize = tileSize + gapSize;
                         
                         // 計算方塊應該在單元格正中央的位置
-                        // 公式：列數 * (方塊大小+間隙) + 間隙/2
-                        // 這樣方塊就會在格子的正中央，而不是貼著邊緣
-                        tile.style.left = `${col * cellSize + gapSize/2}px`;
-                        tile.style.top = `${row * cellSize + gapSize/2}px`;
+                        // 網格有12px的padding，所以需要加上這個偏移
+                        // 公式：列數 * 單元格大小 + 網格padding + 間隙/2
+                        const gridPadding = 12; // 網格的padding
+                        
+                        // 計算每個方向的中心位置
+                        // 水平位置：左邊padding + 列數 * 單元格大小 + 間隙一半
+                        // 垂直位置：頂部padding + 行數 * 單元格大小 + 間隙一半
+                        tile.style.left = `${gridPadding + col * cellSize + gapSize/2}px`;
+                        tile.style.top = `${gridPadding + row * cellSize + gapSize/2}px`;
                         tile.style.width = `${tileSize}px`;
                         tile.style.height = `${tileSize}px`;
                         
