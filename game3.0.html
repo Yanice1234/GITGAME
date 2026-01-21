@@ -225,6 +225,23 @@
             pointer-events: none;
         }
 
+        /* 手掌視覺回饋 */
+        .hand-feedback {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            border: 3px solid rgba(0, 210, 255, 0.5);
+            z-index: 5;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .hand-feedback.active {
+            opacity: 1;
+        }
+
     </style>
 </head>
 <body>
@@ -238,6 +255,9 @@
     
     <!-- 粒子特效畫布 -->
     <canvas id="particles-canvas"></canvas>
+
+    <!-- 手掌視覺回饋 -->
+    <div id="hand-feedback" class="hand-feedback"></div>
 
     <!-- UI 狀態層 -->
     <div id="ui-layer">
@@ -257,13 +277,13 @@
         <h1>體感星星大冒險</h1>
         <p>
             請允許使用攝影機。遊戲中請舉起一隻手，<br>
-            使用 <b>食指指尖</b> 控制藍色光球移動。
+            使用 <b>手掌中心</b> 控制藍色光球移動。
         </p>
         
         <div class="tutorial-icons">
             <div class="icon-item">
-                <div class="icon-box" style="border-color: var(--primary-color);">👆</div>
-                <span>食指控制</span>
+                <div class="icon-box" style="border-color: var(--primary-color);">🖐️</div>
+                <span>手掌控制</span>
             </div>
             <div class="icon-item">
                 <div class="icon-box" style="border-color: var(--accent-color);">⭐</div>
@@ -293,6 +313,7 @@
     const particlesCanvas = document.getElementById('particles-canvas');
     const gameCtx = gameCanvas.getContext('2d');
     const particlesCtx = particlesCanvas.getContext('2d');
+    const handFeedback = document.getElementById('hand-feedback');
     
     // UI 元素
     const startScreen = document.getElementById('start-screen');
@@ -310,17 +331,19 @@
     let score = 0;
     let highScore = localStorage.getItem('handGameHighScore') || 0;
     let lastTime = 0;
+    let handDetected = false; // 追蹤手部是否被偵測到
 
     // 玩家設定 - 提高靈敏度
     const player = {
         x: window.innerWidth / 2,
         y: window.innerHeight / 2,
-        radius: 20,
+        radius: 25, // 稍微加大一點，因為是手掌控制
         color: '#00d2ff',
         targetX: window.innerWidth / 2, // 手勢目標位置
         targetY: window.innerHeight / 2,
-        speed: 0.3, // 增加這個值以提高靈敏度
-        trail: [] // 軌跡效果
+        speed: 0.35, // 增加靈敏度
+        trail: [], // 軌跡效果
+        handSize: 0 // 手掌大小
     };
 
     // 遊戲物件陣列
@@ -347,8 +370,8 @@
     hands.setOptions({
         maxNumHands: 1,
         modelComplexity: 1,
-        minDetectionConfidence: 0.5,
-        minTrackingConfidence: 0.5
+        minDetectionConfidence: 0.6,
+        minTrackingConfidence: 0.6
     });
 
     hands.onResults(onHandsResults);
@@ -373,7 +396,7 @@
             statusText.innerText = "無法啟動攝影機";
         });
 
-    // 當模型準備好時 (MediaPipe 沒有直接的 'ready' 事件，我們用 onResults 第一次觸發判斷)
+    // 當模型準備好時
     let isModelLoaded = false;
 
     // --- 遊戲邏輯 ---
@@ -393,20 +416,56 @@
         if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
             const landmarks = results.multiHandLandmarks[0];
             
-            // 取得食指指尖 (Index Finger Tip - ID: 8)
-            const indexFingerTip = landmarks[8];
+            // 計算手掌中心點 (使用手腕和手指底部點的平均值)
+            const wrist = landmarks[0]; // 手腕
+            const indexMCP = landmarks[5]; // 食指底部
+            const middleMCP = landmarks[9]; // 中指底部
+            const ringMCP = landmarks[13]; // 無名指底部
+            const pinkyMCP = landmarks[17]; // 小指底部
             
-            // 提高靈敏度：直接映射，減少平滑處理
+            // 計算手掌中心點
+            const palmCenterX = (wrist.x + indexMCP.x + middleMCP.x + ringMCP.x + pinkyMCP.x) / 5;
+            const palmCenterY = (wrist.y + indexMCP.y + middleMCP.y + ringMCP.y + pinkyMCP.y) / 5;
+            
+            // 計算手掌大小 (手腕到中指底部的距離)
+            const handSize = Math.sqrt(
+                Math.pow(wrist.x - middleMCP.x, 2) + 
+                Math.pow(wrist.y - middleMCP.y, 2)
+            ) * gameCanvas.width;
+            
+            player.handSize = handSize;
+            
             // 原始影像 x: 0->1. 鏡像後: 1->0.
-            player.targetX = (1 - indexFingerTip.x) * gameCanvas.width;
-            player.targetY = indexFingerTip.y * gameCanvas.height;
+            player.targetX = (1 - palmCenterX) * gameCanvas.width;
+            player.targetY = palmCenterY * gameCanvas.height;
+            
+            // 更新手掌視覺回饋
+            updateHandFeedback(player.targetX, player.targetY, handSize);
+            
+            handDetected = true;
             
             // 添加軌跡點
             player.trail.push({x: player.x, y: player.y});
             if (player.trail.length > 10) {
                 player.trail.shift();
             }
+        } else {
+            handDetected = false;
+            handFeedback.classList.remove('active');
         }
+    }
+
+    // 更新手掌視覺回饋
+    function updateHandFeedback(x, y, size) {
+        handFeedback.style.left = (x - 50) + 'px';
+        handFeedback.style.top = (y - 50) + 'px';
+        
+        // 根據手掌大小調整反饋圈大小
+        const feedbackSize = Math.min(150, Math.max(80, size));
+        handFeedback.style.width = feedbackSize + 'px';
+        handFeedback.style.height = feedbackSize + 'px';
+        
+        handFeedback.classList.add('active');
     }
 
     // 平滑移動 (使用更高的係數以提高靈敏度)
@@ -475,9 +534,20 @@
         // 清除遊戲畫布
         gameCtx.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
 
-        // 更新玩家位置 (提高靈敏度，使用更高的Lerp係數)
-        player.x = lerp(player.x, player.targetX, player.speed);
-        player.y = lerp(player.y, player.targetY, player.speed);
+        // 如果手被偵測到，更新玩家位置，否則保持原位
+        if (handDetected) {
+            // 更新玩家位置 (提高靈敏度，使用更高的Lerp係數)
+            player.x = lerp(player.x, player.targetX, player.speed);
+            player.y = lerp(player.y, player.targetY, player.speed);
+        }
+        
+        // 如果沒有偵測到手，顯示提示
+        if (!handDetected && isGameRunning) {
+            gameCtx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+            gameCtx.font = '20px Arial';
+            gameCtx.textAlign = 'center';
+            gameCtx.fillText('請將手舉到攝影機前', gameCanvas.width/2, gameCanvas.height/2);
+        }
 
         // 繪製玩家軌跡
         for (let i = 0; i < player.trail.length; i++) {
@@ -491,21 +561,27 @@
             gameCtx.closePath();
         }
 
-        // 繪製玩家
+        // 繪製玩家 (手掌球)
         gameCtx.beginPath();
         gameCtx.arc(player.x, player.y, player.radius, 0, 2 * Math.PI);
-        gameCtx.fillStyle = player.color;
-        gameCtx.shadowBlur = 20;
-        gameCtx.shadowColor = player.color;
+        
+        // 根據手掌大小改變顏色深淺
+        const intensity = Math.min(1, player.handSize / 100);
+        const colorIntensity = Math.floor(255 * intensity);
+        const playerColor = `rgb(${colorIntensity}, ${210 + Math.floor(45 * intensity)}, 255)`;
+        
+        gameCtx.fillStyle = playerColor;
+        gameCtx.shadowBlur = 25;
+        gameCtx.shadowColor = playerColor;
         gameCtx.fill();
         gameCtx.shadowBlur = 0;
         gameCtx.closePath();
 
         // 添加玩家光暈效果
         gameCtx.beginPath();
-        gameCtx.arc(player.x, player.y, player.radius + 5, 0, 2 * Math.PI);
+        gameCtx.arc(player.x, player.y, player.radius + 8, 0, 2 * Math.PI);
         gameCtx.strokeStyle = 'rgba(0, 210, 255, 0.5)';
-        gameCtx.lineWidth = 2;
+        gameCtx.lineWidth = 3;
         gameCtx.stroke();
         gameCtx.closePath();
 
@@ -623,7 +699,7 @@
         updateAndDrawParticles();
 
         // 持續產生玩家移動微粒
-        if (isGameRunning && Math.random() < 0.3) {
+        if (isGameRunning && handDetected && Math.random() < 0.4) {
             createParticles(player.x, player.y, '#00d2ff', 1);
         }
 
