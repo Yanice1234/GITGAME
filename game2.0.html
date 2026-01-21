@@ -194,6 +194,8 @@
             animation: appear 0.2s;
             /* 確保方塊完全對齊網格 */
             box-sizing: border-box;
+            /* 確保方塊在格子正中央 */
+            transform: translate(0, 0);
         }
         
         @keyframes appear {
@@ -513,9 +515,15 @@
                         const tileSize = 82; // 方塊寬高
                         const gapSize = 12;  // 間隙大小
                         
-                        // 計算精確位置，確保對齊背景網格
-                        tile.style.left = `${col * (tileSize + gapSize) + gapSize}px`;
-                        tile.style.top = `${row * (tileSize + gapSize) + gapSize}px`;
+                        // 計算精確位置，確保對齊背景網格正中央
+                        // 計算每個單元格的總空間（方塊+間隙）
+                        const cellSize = tileSize + gapSize;
+                        
+                        // 計算方塊應該在單元格正中央的位置
+                        // 公式：列數 * (方塊大小+間隙) + 間隙/2
+                        // 這樣方塊就會在格子的正中央，而不是貼著邊緣
+                        tile.style.left = `${col * cellSize + gapSize/2}px`;
+                        tile.style.top = `${row * cellSize + gapSize/2}px`;
                         tile.style.width = `${tileSize}px`;
                         tile.style.height = `${tileSize}px`;
                         
