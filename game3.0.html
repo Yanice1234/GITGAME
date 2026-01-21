@@ -213,6 +213,17 @@
             align-items: center;
             font-size: 30px;
         }
+        
+        /* 粒子特效畫布 */
+        #particles-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 3;
+            pointer-events: none;
+        }
 
     </style>
 </head>
@@ -224,6 +235,9 @@
     
     <!-- 遊戲畫布 -->
     <canvas id="game-canvas"></canvas>
+    
+    <!-- 粒子特效畫布 -->
+    <canvas id="particles-canvas"></canvas>
 
     <!-- UI 狀態層 -->
     <div id="ui-layer">
@@ -275,8 +289,10 @@
 <script>
     // --- 遊戲設定與變數 ---
     const videoElement = document.getElementById('input-video');
-    const canvasElement = document.getElementById('game-canvas');
-    const canvasCtx = canvasElement.getContext('2d');
+    const gameCanvas = document.getElementById('game-canvas');
+    const particlesCanvas = document.getElementById('particles-canvas');
+    const gameCtx = gameCanvas.getContext('2d');
+    const particlesCtx = particlesCanvas.getContext('2d');
     
     // UI 元素
     const startScreen = document.getElementById('start-screen');
@@ -295,14 +311,16 @@
     let highScore = localStorage.getItem('handGameHighScore') || 0;
     let lastTime = 0;
 
-    // 玩家設定
+    // 玩家設定 - 提高靈敏度
     const player = {
         x: window.innerWidth / 2,
         y: window.innerHeight / 2,
         radius: 20,
         color: '#00d2ff',
         targetX: window.innerWidth / 2, // 手勢目標位置
-        targetY: window.innerHeight / 2
+        targetY: window.innerHeight / 2,
+        speed: 0.3, // 增加這個值以提高靈敏度
+        trail: [] // 軌跡效果
     };
 
     // 遊戲物件陣列
@@ -316,11 +334,16 @@
     // 難度調整
     let obstacleSpeedMultiplier = 1;
 
+    // 粒子系統
+    let particles = [];
+    let backgroundParticles = [];
+
     // --- MediaPipe 初始化 ---
     const hands = new Hands({locateFile: (file) => {
         return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
     }});
 
+    // 提高靈敏度設置
     hands.setOptions({
         maxNumHands: 1,
         modelComplexity: 1,
@@ -362,6 +385,9 @@
             statusText.innerText = "系統準備就緒";
             startBtn.disabled = false;
             startBtn.innerText = "開始遊戲";
+            
+            // 創建背景微粒
+            createBackgroundParticles();
         }
 
         if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
@@ -370,29 +396,71 @@
             // 取得食指指尖 (Index Finger Tip - ID: 8)
             const indexFingerTip = landmarks[8];
             
-            // 注意：MediaPipe 的 x 坐標是 0 (左) 到 1 (右)。
-            // 因為我們在 CSS 把影片翻轉了 (scaleX(-1))，視覺上右邊是 x=0。
-            // 為了讓手往右移時，遊戲角色也往右移，我們需要對 x 做鏡像處理。
+            // 提高靈敏度：直接映射，減少平滑處理
             // 原始影像 x: 0->1. 鏡像後: 1->0.
+            player.targetX = (1 - indexFingerTip.x) * gameCanvas.width;
+            player.targetY = indexFingerTip.y * gameCanvas.height;
             
-            player.targetX = (1 - indexFingerTip.x) * canvasElement.width;
-            player.targetY = indexFingerTip.y * canvasElement.height;
+            // 添加軌跡點
+            player.trail.push({x: player.x, y: player.y});
+            if (player.trail.length > 10) {
+                player.trail.shift();
+            }
         }
     }
 
-    // 平滑移動
+    // 平滑移動 (使用更高的係數以提高靈敏度)
     function lerp(start, end, factor) {
         return start + (end - start) * factor;
     }
 
     function resizeCanvas() {
         const container = document.getElementById('game-container');
-        canvasElement.width = container.clientWidth;
-        canvasElement.height = container.clientHeight;
+        gameCanvas.width = container.clientWidth;
+        gameCanvas.height = container.clientHeight;
+        particlesCanvas.width = container.clientWidth;
+        particlesCanvas.height = container.clientHeight;
     }
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
     highScoreDisplay.innerText = highScore;
+
+    // 創建背景微粒
+    function createBackgroundParticles() {
+        const particleCount = 100;
+        for (let i = 0; i < particleCount; i++) {
+            backgroundParticles.push({
+                x: Math.random() * gameCanvas.width,
+                y: Math.random() * gameCanvas.height,
+                size: Math.random() * 3 + 1,
+                speed: Math.random() * 0.5 + 0.1,
+                color: i % 3 === 0 ? 'rgba(0, 210, 255, 0.3)' : 
+                       i % 3 === 1 ? 'rgba(255, 215, 0, 0.3)' : 'rgba(255, 255, 255, 0.2)'
+            });
+        }
+    }
+
+    // 更新和繪製背景微粒
+    function updateBackgroundParticles() {
+        particlesCtx.clearRect(0, 0, particlesCanvas.width, particlesCanvas.height);
+        
+        for (let i = 0; i < backgroundParticles.length; i++) {
+            const p = backgroundParticles[i];
+            p.y += p.speed;
+            
+            // 如果粒子超出底部，重置到頂部
+            if (p.y > particlesCanvas.height) {
+                p.y = 0;
+                p.x = Math.random() * particlesCanvas.width;
+            }
+            
+            // 繪製微粒
+            particlesCtx.beginPath();
+            particlesCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            particlesCtx.fillStyle = p.color;
+            particlesCtx.fill();
+        }
+    }
 
     // 遊戲迴圈
     function gameLoop(timestamp) {
@@ -401,29 +469,45 @@
         const deltaTime = timestamp - lastTime;
         lastTime = timestamp;
 
-        // 清除畫布
-        canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+        // 更新背景微粒
+        updateBackgroundParticles();
 
-        // 更新玩家位置 (Lerp 平滑處理)
-        player.x = lerp(player.x, player.targetX, 0.2);
-        player.y = lerp(player.y, player.targetY, 0.2);
+        // 清除遊戲畫布
+        gameCtx.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
+
+        // 更新玩家位置 (提高靈敏度，使用更高的Lerp係數)
+        player.x = lerp(player.x, player.targetX, player.speed);
+        player.y = lerp(player.y, player.targetY, player.speed);
+
+        // 繪製玩家軌跡
+        for (let i = 0; i < player.trail.length; i++) {
+            const point = player.trail[i];
+            const alpha = i / player.trail.length * 0.5;
+            
+            gameCtx.beginPath();
+            gameCtx.arc(point.x, point.y, player.radius * (i / player.trail.length), 0, 2 * Math.PI);
+            gameCtx.fillStyle = `rgba(0, 210, 255, ${alpha})`;
+            gameCtx.fill();
+            gameCtx.closePath();
+        }
 
         // 繪製玩家
-        canvasCtx.beginPath();
-        canvasCtx.arc(player.x, player.y, player.radius, 0, 2 * Math.PI);
-        canvasCtx.fillStyle = player.color;
-        canvasCtx.shadowBlur = 20;
-        canvasCtx.shadowColor = player.color;
-        canvasCtx.fill();
-        canvasCtx.shadowBlur = 0;
-        canvasCtx.closePath();
+        gameCtx.beginPath();
+        gameCtx.arc(player.x, player.y, player.radius, 0, 2 * Math.PI);
+        gameCtx.fillStyle = player.color;
+        gameCtx.shadowBlur = 20;
+        gameCtx.shadowColor = player.color;
+        gameCtx.fill();
+        gameCtx.shadowBlur = 0;
+        gameCtx.closePath();
 
-        // 繪製手勢追蹤點 (可選，視覺輔助)
-        canvasCtx.beginPath();
-        canvasCtx.arc(player.targetX, player.targetY, 5, 0, 2 * Math.PI);
-        canvasCtx.fillStyle = "rgba(255, 255, 255, 0.5)";
-        canvasCtx.fill();
-        canvasCtx.closePath();
+        // 添加玩家光暈效果
+        gameCtx.beginPath();
+        gameCtx.arc(player.x, player.y, player.radius + 5, 0, 2 * Math.PI);
+        gameCtx.strokeStyle = 'rgba(0, 210, 255, 0.5)';
+        gameCtx.lineWidth = 2;
+        gameCtx.stroke();
+        gameCtx.closePath();
 
         // 處理星星
         starTimer += deltaTime;
@@ -434,29 +518,47 @@
 
         for (let i = stars.length - 1; i >= 0; i--) {
             const s = stars[i];
-            // 繪製星星 (簡化為金色圓形)
-            canvasCtx.beginPath();
-            canvasCtx.arc(s.x, s.y, s.radius, 0, 2 * Math.PI);
-            canvasCtx.fillStyle = '#ffd700';
-            canvasCtx.fill();
-            canvasCtx.strokeStyle = '#fff';
-            canvasCtx.lineWidth = 2;
-            canvasCtx.stroke();
-            canvasCtx.closePath();
+            
+            // 星星脈動效果
+            const pulse = Math.sin(timestamp / 200) * 3;
+            
+            // 繪製星星 (金色圓形帶光暈)
+            gameCtx.beginPath();
+            gameCtx.arc(s.x, s.y, s.radius + pulse, 0, 2 * Math.PI);
+            gameCtx.fillStyle = '#ffd700';
+            gameCtx.shadowBlur = 15;
+            gameCtx.shadowColor = '#ffd700';
+            gameCtx.fill();
+            gameCtx.shadowBlur = 0;
+            gameCtx.strokeStyle = '#fff';
+            gameCtx.lineWidth = 2;
+            gameCtx.stroke();
+            gameCtx.closePath();
+            
+            // 星星內部光點
+            gameCtx.beginPath();
+            gameCtx.arc(s.x, s.y, s.radius / 2, 0, 2 * Math.PI);
+            gameCtx.fillStyle = '#fff';
+            gameCtx.fill();
+            gameCtx.closePath();
 
             // 碰撞檢測 (玩家 vs 星星)
             const dist = Math.hypot(player.x - s.x, player.y - s.y);
             if (dist < player.radius + s.radius) {
                 // 收集成功
                 score += 10;
-                scoreDisplay.innerText = score;
-                createParticles(s.x, s.y, '#ffd700');
+                scoreDisplay.innerText = score; // 即時更新分數顯示
+                createParticles(s.x, s.y, '#ffd700', 15);
+                createParticles(s.x, s.y, '#ffffff', 10);
                 stars.splice(i, 1);
                 
                 // 難度隨分數提升
                 if (score % 50 === 0) {
                     obstacleSpeedMultiplier += 0.1;
                 }
+                
+                // 每次收集星星都更新分數顯示
+                updateScoreDisplay();
             }
         }
 
@@ -475,10 +577,10 @@
             obs.rotation += 0.05;
 
             // 繪製障礙物 (紅色帶刺球體感)
-            canvasCtx.save();
-            canvasCtx.translate(obs.x, obs.y);
-            canvasCtx.rotate(obs.rotation);
-            canvasCtx.beginPath();
+            gameCtx.save();
+            gameCtx.translate(obs.x, obs.y);
+            gameCtx.rotate(obs.rotation);
+            gameCtx.beginPath();
             // 畫一個簡單的多邊形模擬刺
             const spikes = 8;
             const outerRadius = obs.radius;
@@ -488,16 +590,19 @@
                 const currAngle = (Math.PI / spikes) * j;
                 const x = Math.cos(currAngle) * r;
                 const y = Math.sin(currAngle) * r;
-                if(j===0) canvasCtx.moveTo(x, y);
-                else canvasCtx.lineTo(x, y);
+                if(j===0) gameCtx.moveTo(x, y);
+                else gameCtx.lineTo(x, y);
             }
-            canvasCtx.closePath();
-            canvasCtx.fillStyle = '#ff4757';
-            canvasCtx.fill();
-            canvasCtx.restore();
+            gameCtx.closePath();
+            gameCtx.fillStyle = '#ff4757';
+            gameCtx.shadowBlur = 10;
+            gameCtx.shadowColor = '#ff4757';
+            gameCtx.fill();
+            gameCtx.shadowBlur = 0;
+            gameCtx.restore();
 
             // 移除超出畫面的障礙物
-            if (obs.y > canvasElement.height + obs.radius) {
+            if (obs.y > gameCanvas.height + obs.radius) {
                 obstacles.splice(i, 1);
                 continue;
             }
@@ -506,6 +611,9 @@
             // 為了公平一點，障礙物碰撞判定稍微比視覺小一點
             const dist = Math.hypot(player.x - obs.x, player.y - obs.y);
             if (dist < (player.radius + obs.radius * 0.8)) {
+                // 碰撞時產生爆炸粒子效果
+                createParticles(obs.x, obs.y, '#ff4757', 30);
+                createParticles(player.x, player.y, '#00d2ff', 20);
                 gameOver();
                 return;
             }
@@ -514,7 +622,21 @@
         // 粒子效果更新
         updateAndDrawParticles();
 
+        // 持續產生玩家移動微粒
+        if (isGameRunning && Math.random() < 0.3) {
+            createParticles(player.x, player.y, '#00d2ff', 1);
+        }
+
         requestAnimationFrame(gameLoop);
+    }
+
+    // 即時更新分數顯示
+    function updateScoreDisplay() {
+        scoreDisplay.innerText = score;
+        scoreDisplay.style.transform = 'scale(1.2)';
+        setTimeout(() => {
+            scoreDisplay.style.transform = 'scale(1)';
+        }, 200);
     }
 
     // --- 生成器 ---
@@ -522,8 +644,8 @@
     function spawnStar() {
         if (stars.length > 3) return; // 限制同時存在的數量
         stars.push({
-            x: Math.random() * (canvasElement.width - 40) + 20,
-            y: Math.random() * (canvasElement.height - 40) + 20,
+            x: Math.random() * (gameCanvas.width - 40) + 20,
+            y: Math.random() * (gameCanvas.height - 40) + 20,
             radius: 15
         });
     }
@@ -531,7 +653,7 @@
     function spawnObstacle() {
         const radius = Math.random() * 15 + 15; // 15~30
         obstacles.push({
-            x: Math.random() * canvasElement.width,
+            x: Math.random() * gameCanvas.width,
             y: -radius,
             radius: radius,
             speed: Math.random() * 3 + 2, // 基礎速度
@@ -540,36 +662,38 @@
     }
 
     // --- 粒子系統 (視覺效果) ---
-    let particles = [];
-    function createParticles(x, y, color) {
-        for (let i = 0; i < 8; i++) {
+    function createParticles(x, y, color, count = 8) {
+        for (let i = 0; i < count; i++) {
             particles.push({
                 x: x,
                 y: y,
-                vx: (Math.random() - 0.5) * 5,
-                vy: (Math.random() - 0.5) * 5,
+                vx: (Math.random() - 0.5) * 8,
+                vy: (Math.random() - 0.5) * 8,
                 life: 1.0,
-                color: color
+                color: color,
+                size: Math.random() * 4 + 2
             });
         }
     }
 
     function updateAndDrawParticles() {
+        particlesCtx.clearRect(0, 0, particlesCanvas.width, particlesCanvas.height);
+        
         for (let i = particles.length - 1; i >= 0; i--) {
             let p = particles[i];
             p.x += p.vx;
             p.y += p.vy;
-            p.life -= 0.05;
+            p.life -= 0.02;
             
             if (p.life <= 0) {
                 particles.splice(i, 1);
             } else {
-                canvasCtx.globalAlpha = p.life;
-                canvasCtx.fillStyle = p.color;
-                canvasCtx.beginPath();
-                canvasCtx.arc(p.x, p.y, 3, 0, Math.PI*2);
-                canvasCtx.fill();
-                canvasCtx.globalAlpha = 1.0;
+                particlesCtx.globalAlpha = p.life;
+                particlesCtx.fillStyle = p.color;
+                particlesCtx.beginPath();
+                particlesCtx.arc(p.x, p.y, p.size, 0, Math.PI*2);
+                particlesCtx.fill();
+                particlesCtx.globalAlpha = 1.0;
             }
         }
     }
@@ -589,6 +713,7 @@
         stars = [];
         obstacles = [];
         particles = [];
+        player.trail = [];
 
         // 初始生成一個星星
         spawnStar();
