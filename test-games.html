@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>遊戲測試頁面</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            color: white;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #00d2ff;
+        }
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .test-card {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+        }
+        .test-card h3 {
+            color: #ffd700;
+            margin-bottom: 15px;
+        }
+        .test-link {
+            display: inline-block;
+            background: linear-gradient(90deg, #00d2ff, #3a7bd5);
+            color: white;
+            text-decoration: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            margin: 5px;
+            transition: all 0.3s ease;
+        }
+        .test-link:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0, 210, 255, 0.3);
+        }
+        .status {
+            margin-top: 10px;
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-size: 0.9rem;
+        }
+        .status.pending { background: rgba(255, 193, 7, 0.2); color: #ffc107; }
+        .status.success { background: rgba(76, 175, 80, 0.2); color: #4caf50; }
+        .status.error { background: rgba(244, 67, 54, 0.2); color: #f44336; }
+        .info-panel {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 30px;
+        }
+        .log-panel {
+            background: #000;
+            border: 1px solid #333;
+            border-radius: 5px;
+            padding: 15px;
+            margin-top: 20px;
+            height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+            color: #0f0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 遊戲系統測試頁面</h1>
+        
+        <div class="test-grid">
+            <div class="test-card">
+                <h3>🎯 俄羅斯方塊 (game1.0.html)</h3>
+                <p>經典俄羅斯方塊遊戲，包含音效、粒子特效和成就系統</p>
+                <a href="game1.0.html" target="_blank" class="test-link">開啟遊戲</a>
+                <a href="game1.0.html" target="_blank" class="test-link">新窗口測試</a>
+                <div class="status pending" id="tetris-status">等待測試...</div>
+            </div>
+            
+            <div class="test-card">
+                <h3>🔢 2048 基礎版 (game2.0.html)</h3>
+                <p>數字合併遊戲，包含音效和觸控支持</p>
+                <a href="game2.0.html" target="_blank" class="test-link">開啟遊戲</a>
+                <a href="game2.0.html" target="_blank" class="test-link">新窗口測試</a>
+                <div class="status pending" id="2048-status">等待測試...</div>
+            </div>
+            
+            <div class="test-card">
+                <h3>🚀 2048 增強版 (game2.0.enhanced.html)</h3>
+                <p>增強版2048，包含完整音效系統和虛擬控制器</p>
+                <a href="game2.0.enhanced.html" target="_blank" class="test-link">開啟遊戲</a>
+                <a href="game2.0.enhanced.html" target="_blank" class="test-link">新窗口測試</a>
+                <div class="status pending" id="2048-enhanced-status">等待測試...</div>
+            </div>
+            
+            <div class="test-card">
+                <h3>✨ 星星閃避 (game3.0.html)</h3>
+                <p>手勢控制遊戲，支持MediaPipe和備用控制模式</p>
+                <a href="game3.0.html" target="_blank" class="test-link">開啟遊戲</a>
+                <a href="game3.0.html" target="_blank" class="test-link">新窗口測試</a>
+                <div class="status pending" id="stardodger-status">等待測試...</div>
+            </div>
+        </div>
+        
+        <div class="info-panel">
+            <h3>📋 修復總結</h3>
+            <ul>
+                <li><strong>俄羅斯方塊:</strong> 添加了安全初始化、DOM檢查和錯誤處理</li>
+                <li><strong>2048 基礎版:</strong> 修復了最高分顯示和初始化問題</li>
+                <li><strong>2048 增強版:</strong> 添加了安全初始化和錯誤處理</li>
+                <li><strong>星星閃避:</strong> 添加了自動初始化、攝影機錯誤處理和備用控制</li>
+            </ul>
+        </div>
+        
+        <div class="info-panel">
+            <h3>🧪 測試步驟</h3>
+            <ol>
+                <li>點擊每個遊戲的"開啟遊戲"連結</li>
+                <li>檢查遊戲是否正常顯示界面</li>
+                <li>測試遊戲基本功能是否正常工作</li>
+                <li>檢查控制台是否有錯誤訊息</li>
+                <li>測試音效和控制功能</li>
+                <li>對2048遊戲，檢查最高分是否正確保存和顯示</li>
+            </ol>
+        </div>
+        
+        <div class="log-panel" id="test-log">
+            📝 測試日誌將顯示在這裡...
+        </div>
+    </div>
+    
+    <script>
+        // 測試日誌系統
+        function log(message, type = 'info') {
+            const logPanel = document.getElementById('test-log');
+            const timestamp = new Date().toLocaleTimeString();
+            const logMessage = `[${timestamp}] ${message}\n`;
+            logPanel.textContent += logMessage;
+            logPanel.scrollTop = logPanel.scrollHeight;
+            
+            console.log(message);
+        }
+        
+        // 測試遊戲狀態
+        function testGameStatus(gameId, gameName) {
+            const statusElement = document.getElementById(gameId + '-status');
+            
+            try {
+                // 模擬檢查遊戲文件是否存在
+                fetch(gameId + '.html', { method: 'HEAD' })
+                    .then(response => {
+                        if (response.ok) {
+                            statusElement.className = 'status success';
+                            statusElement.textContent = '✅ 遊戲文件存在';
+                            log(`✅ ${gameName}: 遊戲文件檢查通過`);
+                        } else {
+                            statusElement.className = 'status error';
+                            statusElement.textContent = '❌ 遊戲文件不存在';
+                            log(`❌ ${gameName}: 遊戲文件不存在`);
+                        }
+                    })
+                    .catch(error => {
+                        statusElement.className = 'status error';
+                        statusElement.textContent = '❌ 檢查失敗';
+                        log(`❌ ${gameName}: 檢查失敗 - ${error.message}`);
+                    });
+            } catch (error) {
+                statusElement.className = 'status error';
+                statusElement.textContent = '❌ 測試失敗';
+                log(`❌ ${gameName}: 測試失敗 - ${error.message}`);
+            }
+        }
+        
+        // 頁面載入後自動測試
+        window.addEventListener('DOMContentLoaded', () => {
+            log('🚀 開始遊戲系統測試');
+            
+            // 測試所有遊戲
+            testGameStatus('game1.0', '俄羅斯方塊');
+            testGameStatus('game2.0', '2048基礎版');
+            testGameStatus('game2.0.enhanced', '2048增強版');
+            testGameStatus('game3.0', '星星閃避');
+            
+            log('📋 所有遊戲狀態檢查完成');
+            log('💡 請手動測試每個遊戲的功能');
+        });
+        
+        // 添加遊戲連結點擊日誌
+        document.querySelectorAll('.test-link').forEach(link => {
+            link.addEventListener('click', (e) => {
+                const gameName = e.target.closest('.test-card').querySelector('h3').textContent;
+                log(`🎮 點擊開啟: ${gameName}`);
+            });
+        });
+    </script>
+</body>
+</html>

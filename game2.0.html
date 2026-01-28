@@ -102,7 +102,7 @@
             font-size: 1.1rem;
             font-weight: bold;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all var(--animation-duration, 0.3s) ease;
             box-shadow: 0 4px 10px rgba(0, 131, 176, 0.3);
         }
         
@@ -177,7 +177,7 @@
             align-items: center;
             font-size: 2.2rem;
             font-weight: bold;
-            transition: all 0.15s ease;
+            transition: all var(--animation-duration, 0.15s) ease;
         }
         
         .tile {
@@ -191,7 +191,7 @@
             font-size: 2.2rem;
             font-weight: bold;
             transition: all 0.15s ease;
-            animation: appear 0.2s;
+            animation: appear var(--animation-duration, 0.2s);
             /* 確保方塊完全對齊網格 */
             box-sizing: border-box;
             /* 確保方塊在格子正中央 */
@@ -205,7 +205,7 @@
         }
         
         .tile.merged {
-            animation: pop 0.3s;
+            animation: pop var(--animation-duration, 0.3s);
         }
         
         @keyframes pop {
@@ -283,6 +283,85 @@
             line-height: 1.5;
         }
         
+        /* 虛擬控制界面 */
+        .virtual-controls {
+            margin: 30px 0;
+            text-align: center;
+            display: none; /* 預設隱藏，在移動設備上顯示 */
+        }
+        
+        .control-info {
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+            opacity: 0.7;
+        }
+        
+        .d-pad {
+            position: relative;
+            width: 150px;
+            height: 150px;
+            margin: 0 auto;
+        }
+        
+        .d-pad-button {
+            position: absolute;
+            width: 45px;
+            height: 45px;
+            border: none;
+            border-radius: 10px;
+            background: linear-gradient(135deg, rgba(0, 210, 255, 0.8), rgba(58, 123, 213, 0.8));
+            color: white;
+            font-size: 1.5rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 15px rgba(0, 210, 255, 0.3);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .d-pad-button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(0, 210, 255, 0.5);
+            background: linear-gradient(135deg, rgba(0, 210, 255, 1), rgba(58, 123, 213, 1));
+        }
+        
+        .d-pad-button:active {
+            transform: scale(0.95);
+            box-shadow: 0 2px 10px rgba(0, 210, 255, 0.3);
+        }
+        
+        .d-pad-button.up {
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        
+        .d-pad-button.down {
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        
+        .d-pad-button.left {
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        
+        .d-pad-button.right {
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        
+        .d-pad-middle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
         @media (max-width: 600px) {
             .grid {
                 width: 300px;
@@ -304,6 +383,27 @@
             .score-container, .moves-container, .best-container {
                 min-width: 120px;
                 padding: 12px 18px;
+            }
+            
+            .virtual-controls {
+                display: block; /* 在移動設備上顯示虛擬控制 */
+            }
+            
+            .d-pad {
+                width: 180px;
+                height: 180px;
+            }
+            
+            .d-pad-button {
+                width: 55px;
+                height: 55px;
+                font-size: 1.8rem;
+            }
+        }
+        
+        @media (hover: none) and (pointer: coarse) {
+            .virtual-controls {
+                display: block; /* 在觸摸設備上顯示虛擬控制 */
             }
         }
     </style>
@@ -352,6 +452,19 @@
             <div class="game-board">
                 <div class="grid" id="grid">
                     <!-- 網格將由JavaScript生成 -->
+                </div>
+            </div>
+        </div>
+        
+        <!-- 虛擬控制界面 -->
+        <div class="virtual-controls" id="virtual-controls">
+            <div class="control-info">觸控/點擊下方按鈕控制</div>
+            <div class="d-pad">
+                <button class="d-pad-button up" data-direction="up">↑</button>
+                <div class="d-pad-middle">
+                    <button class="d-pad-button left" data-direction="left">←</button>
+                    <button class="d-pad-button down" data-direction="down">↓</button>
+                    <button class="d-pad-button right" data-direction="right">→</button>
                 </div>
             </div>
         </div>
@@ -418,6 +531,474 @@
         
         let currentTheme = 'default';
         
+        // 音效系統
+        class GameAudio {
+            constructor() {
+                this.audioContext = null;
+                this.initialized = false;
+                this.masterVolume = 0.3;
+                this.enabled = true;
+            }
+            
+            init() {
+                if (this.initialized) return;
+                
+                try {
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    this.initialized = true;
+                    this.masterGainNode = this.audioContext.createGain();
+                    this.masterGainNode.connect(this.audioContext.destination);
+                    this.masterGainNode.gain.value = this.masterVolume;
+                } catch (error) {
+                    console.warn('音效系統初始化失敗:', error);
+                    this.enabled = false;
+                }
+            }
+            
+            playSound(frequency, duration, type = 'sine', volume = 0.5) {
+                if (!this.enabled || !this.initialized) return;
+                
+                try {
+                    const oscillator = this.audioContext.createOscillator();
+                    const gainNode = this.audioContext.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(this.masterGainNode);
+                    
+                    oscillator.type = type;
+                    oscillator.frequency.value = frequency;
+                    
+                    gainNode.gain.setValueAtTime(0, this.audioContext.currentTime);
+                    gainNode.gain.linearRampToValueAtTime(volume, this.audioContext.currentTime + 0.01);
+                    gainNode.gain.exponentialRampToValueAtTime(0.001, this.audioContext.currentTime + duration);
+                    
+                    oscillator.start(this.audioContext.currentTime);
+                    oscillator.stop(this.audioContext.currentTime + duration);
+                    
+                } catch (error) {
+                    console.warn('播放音效失敗:', error);
+                }
+            }
+            
+            playMove() {
+                // 方塊移動音效 - 輕柔的撥弦聲
+                this.playSound(400, 0.1, 'sine', 0.2);
+            }
+            
+            playMerge(value) {
+                // 合併音效 - 根據數值播放不同音高
+                const baseFreq = 261.63; // C4
+                const multiplier = Math.log2(value);
+                const frequency = baseFreq * (1 + multiplier * 0.15);
+                const duration = Math.min(0.3, 0.1 + value * 0.00005);
+                
+                // 播放和弦音效
+                this.playSound(frequency, duration, 'triangle', 0.4);
+                this.playSound(frequency * 1.25, duration, 'sine', 0.3);
+                
+                // 觸覺反饋
+                if ('vibrate' in navigator) {
+                    const intensity = Math.min(50, value * 2);
+                    navigator.vibrate([intensity, 20, intensity]);
+                }
+            }
+            
+            playUndo() {
+                // 撤銷音效 - 向下的音階
+                setTimeout(() => this.playSound(440, 0.08, 'sine', 0.2), 0);
+                setTimeout(() => this.playSound(349, 0.08, 'sine', 0.2), 50);
+                setTimeout(() => this.playSound(262, 0.08, 'sine', 0.2), 100);
+                
+                // 觸覺反饋
+                if ('vibrate' in navigator) {
+                    navigator.vibrate([15, 10, 15, 10, 20]);
+                }
+            }
+            
+            playWin() {
+                // 勝利音效 - 上行的和弦
+                const chords = [
+                    [261.63, 329.63, 392.00], // C major
+                    [293.66, 369.99, 440.00], // D major
+                    [329.63, 415.30, 493.88], // E major
+                ];
+                
+                chords.forEach((chord, index) => {
+                    setTimeout(() => {
+                        chord.forEach(freq => {
+                            this.playSound(freq, 0.4, 'triangle', 0.3);
+                        });
+                    }, index * 200);
+                });
+                
+                // 慶祝式震動
+                if ('vibrate' in navigator) {
+                    navigator.vibrate([50, 30, 50, 30, 100, 30, 150]);
+                }
+            }
+            
+            playGameOver() {
+                // 遊戲結束音效 - 下行的和弦
+                const freq = [523.25, 415.30, 329.63, 261.63];
+                freq.forEach((f, i) => {
+                    setTimeout(() => this.playSound(f, 0.3, 'sawtooth', 0.3), i * 100);
+                });
+                
+                // 遊戲結束震動
+                if ('vibrate' in navigator) {
+                    navigator.vibrate([100, 50, 100, 50, 200]);
+                }
+            }
+            
+            playNewGame() {
+                // 新遊戲音效 - 清脆的啟動聲
+                this.playSound(523.25, 0.15, 'sine', 0.4);
+                setTimeout(() => this.playSound(659.25, 0.15, 'sine', 0.4), 50);
+                
+                // 觸覺反饋
+                if ('vibrate' in navigator) {
+                    navigator.vibrate(20);
+                }
+            }
+            
+            setVolume(volume) {
+                this.masterVolume = Math.max(0, Math.min(1, volume));
+                if (this.masterGainNode) {
+                    this.masterGainNode.gain.value = this.masterVolume;
+                }
+            }
+            
+            toggle(enabled) {
+                this.enabled = enabled;
+            }
+        }
+        
+        // 初始化音效系統
+        const gameAudio = new GameAudio();
+        
+        // 移動控制系統
+        class MobileControls {
+            constructor() {
+                this.touchStartX = 0;
+                this.touchStartY = 0;
+                this.touchEndX = 0;
+                this.touchEndY = 0;
+                this.minSwipeDistance = 30; // 從50px降低到30px以提高響應性
+                this.maxVerticalDistance = 100; // 防止垂直滑動被誤認為水平滑動
+                this.swipeStartTime = 0;
+                this.maxSwipeTime = 500; // 最大滑動時間（毫秒）
+                this.isEnabled = true;
+                
+                this.init();
+            }
+            
+            init() {
+                // 綁定觸摸事件到遊戲網格
+                const gridElement = document.getElementById('grid');
+                
+                // 觸摸開始
+                gridElement.addEventListener('touchstart', (e) => {
+                    if (!this.isEnabled) return;
+                    
+                    const touch = e.touches[0];
+                    this.touchStartX = touch.clientX;
+                    this.touchStartY = touch.clientY;
+                    this.swipeStartTime = Date.now();
+                    
+                    // 防止默認的觸摸行為（如頁面滾動）
+                    e.preventDefault();
+                }, { passive: false });
+                
+                // 觸摸移動
+                gridElement.addEventListener('touchmove', (e) => {
+                    if (!this.isEnabled) return;
+                    
+                    // 防止頁面滾動
+                    e.preventDefault();
+                }, { passive: false });
+                
+                // 觸摸結束
+                gridElement.addEventListener('touchend', (e) => {
+                    if (!this.isEnabled) return;
+                    
+                    if (e.changedTouches.length > 0) {
+                        const touch = e.changedTouches[0];
+                        this.touchEndX = touch.clientX;
+                        this.touchEndY = touch.clientY;
+                        
+                        this.handleSwipe();
+                    }
+                    
+                    e.preventDefault();
+                }, { passive: false });
+                
+                // 添加可視化的觸摸反饋
+                this.addTouchFeedback();
+            }
+            
+            handleSwipe() {
+                const swipeTime = Date.now() - this.swipeStartTime;
+                
+                // 檢查滑動時間是否合理
+                if (swipeTime > this.maxSwipeTime) return;
+                
+                const deltaX = this.touchEndX - this.touchStartX;
+                const deltaY = this.touchEndY - this.touchStartY;
+                const absDeltaX = Math.abs(deltaX);
+                const absDeltaY = Math.abs(deltaY);
+                
+                // 確保滑動距離達到最小值
+                if (Math.max(absDeltaX, absDeltaY) < this.minSwipeDistance) return;
+                
+                // 確定滑動方向
+                if (absDeltaX > absDeltaY) {
+                    // 水平滑動
+                    if (Math.abs(deltaY) < this.maxVerticalDistance) {
+                        if (deltaX > 0) {
+                            this.handleSwipeDirection('right');
+                        } else {
+                            this.handleSwipeDirection('left');
+                        }
+                    }
+                } else {
+                    // 垂直滑動
+                    if (Math.abs(deltaX) < this.maxVerticalDistance) {
+                        if (deltaY > 0) {
+                            this.handleSwipeDirection('down');
+                        } else {
+                            this.handleSwipeDirection('up');
+                        }
+                    }
+                }
+            }
+            
+            handleSwipeDirection(direction) {
+                // 添加視覺反饋
+                this.showSwipeIndicator(direction);
+                
+                // 觸發移動
+                move(direction);
+                
+                // 觸覺反饋
+                if ('vibrate' in navigator) {
+                    navigator.vibrate(10);
+                }
+            }
+            
+            showSwipeIndicator(direction) {
+                const indicator = document.createElement('div');
+                indicator.className = 'swipe-indicator';
+                indicator.innerHTML = this.getArrowIcon(direction);
+                indicator.style.cssText = `
+                    position: fixed;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    font-size: 3rem;
+                    color: rgba(0, 210, 255, 0.8);
+                    z-index: 1000;
+                    pointer-events: none;
+                    animation: swipeFade 0.5s ease-out forwards;
+                `;
+                
+                document.body.appendChild(indicator);
+                
+                // 0.5秒後移除指示器
+                setTimeout(() => {
+                    if (indicator.parentNode) {
+                        indicator.parentNode.removeChild(indicator);
+                    }
+                }, 500);
+            }
+            
+            getArrowIcon(direction) {
+                const arrows = {
+                    up: '↑',
+                    down: '↓',
+                    left: '←',
+                    right: '→'
+                };
+                return arrows[direction] || '';
+            }
+            
+            addTouchFeedback() {
+                const style = document.createElement('style');
+                style.textContent = `
+                    @keyframes swipeFade {
+                        0% {
+                            opacity: 1;
+                            transform: translate(-50%, -50%) scale(0.5);
+                        }
+                        50% {
+                            opacity: 1;
+                            transform: translate(-50%, -50%) scale(1.2);
+                        }
+                        100% {
+                            opacity: 0;
+                            transform: translate(-50%, -50%) scale(1.5);
+                        }
+                    }
+                    
+                    #grid {
+                        touch-action: none;
+                        user-select: none;
+                        -webkit-user-select: none;
+                        -moz-user-select: none;
+                        -ms-user-select: none;
+                    }
+                    
+                    #grid:active {
+                        cursor: grabbing;
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+            
+            toggle(enabled) {
+                this.isEnabled = enabled;
+            }
+        }
+        
+        // 初始化移動控制
+        const mobileControls = new MobileControls();
+        
+        // 性能優化系統
+        class PerformanceOptimizer {
+            constructor() {
+                this.targetFPS = 60;
+                this.currentFPS = 60;
+                this.fpsHistory = [];
+                this.maxHistoryLength = 60;
+                this.qualityLevel = 'high';
+                this.lastFrameTime = performance.now();
+                this.frameCount = 0;
+                this.adaptiveQuality = true;
+                
+                this.init();
+            }
+            
+            init() {
+                // 檢測設備性能
+                this.detectDevicePerformance();
+                
+                // 開始FPS監控
+                this.startFPSMonitoring();
+            }
+            
+            detectDevicePerformance() {
+                const hardwareConcurrency = navigator.hardwareConcurrency || 2;
+                const deviceMemory = navigator.deviceMemory || 4;
+                const connection = navigator.connection ? navigator.connection.effectiveType : '4g';
+                
+                // 根據設備規格設置初始質量級別
+                if (hardwareConcurrency < 4 || deviceMemory < 4) {
+                    this.qualityLevel = 'medium';
+                }
+                
+                if (hardwareConcurrency < 2 || deviceMemory < 2) {
+                    this.qualityLevel = 'low';
+                }
+                
+                // 網絡連接影響動畫質量
+                if (connection === 'slow-2g' || connection === '2g') {
+                    this.qualityLevel = 'low';
+                }
+                
+                console.log(`設備性能檢測: CPU核心=${hardwareConcurrency}, 內存=${deviceMemory}GB, 網絡=${connection}`);
+                console.log(`初始質量級別: ${this.qualityLevel}`);
+            }
+            
+            startFPSMonitoring() {
+                const monitor = () => {
+                    const currentTime = performance.now();
+                    const deltaTime = currentTime - this.lastFrameTime;
+                    const currentFPS = 1000 / deltaTime;
+                    
+                    this.fpsHistory.push(currentFPS);
+                    if (this.fpsHistory.length > this.maxHistoryLength) {
+                        this.fpsHistory.shift();
+                    }
+                    
+                    // 計算平均FPS
+                    this.currentFPS = this.fpsHistory.reduce((a, b) => a + b, 0) / this.fpsHistory.length;
+                    
+                    this.lastFrameTime = currentTime;
+                    this.frameCount++;
+                    
+                    // 每60幀檢查一次性能並調整質量
+                    if (this.frameCount % 60 === 0 && this.adaptiveQuality) {
+                        this.adjustQuality();
+                    }
+                    
+                    requestAnimationFrame(monitor);
+                };
+                
+                requestAnimationFrame(monitor);
+            }
+            
+            adjustQuality() {
+                const avgFPS = this.currentFPS;
+                
+                if (avgFPS < 45 && this.qualityLevel !== 'low') {
+                    // 性能不足，降低質量
+                    this.qualityLevel = this.qualityLevel === 'high' ? 'medium' : 'low';
+                    this.applyQualitySettings();
+                    console.log(`性能不足，降低質量到: ${this.qualityLevel}`);
+                } else if (avgFPS > 55 && this.qualityLevel !== 'high') {
+                    // 性能有餘，提升質量
+                    this.qualityLevel = this.qualityLevel === 'low' ? 'medium' : 'high';
+                    this.applyQualitySettings();
+                    console.log(`性能良好，提升質量到: ${this.qualityLevel}`);
+                }
+            }
+            
+            applyQualitySettings() {
+                const root = document.documentElement;
+                
+                switch(this.qualityLevel) {
+                    case 'high':
+                        // 高質量：完整動畫和效果
+                        root.style.setProperty('--animation-duration', '0.15s');
+                        root.style.setProperty('--particle-count', '20');
+                        break;
+                    case 'medium':
+                        // 中等質量：減少動畫
+                        root.style.setProperty('--animation-duration', '0.1s');
+                        root.style.setProperty('--particle-count', '10');
+                        break;
+                    case 'low':
+                        // 低質量：最小化動畫
+                        root.style.setProperty('--animation-duration', '0.05s');
+                        root.style.setProperty('--particle-count', '5');
+                        break;
+                }
+            }
+            
+            getOptimalAnimationDuration() {
+                const durations = {
+                    high: 150,
+                    medium: 100,
+                    low: 50
+                };
+                return durations[this.qualityLevel] || 100;
+            }
+            
+            shouldSkipAnimation() {
+                return this.qualityLevel === 'low' && this.currentFPS < 30;
+            }
+            
+            getCurrentFPS() {
+                return Math.round(this.currentFPS);
+            }
+            
+            getQualityLevel() {
+                return this.qualityLevel;
+            }
+        }
+        
+        // 初始化性能優化器
+        const performanceOptimizer = new PerformanceOptimizer();
+        
         // DOM元素
         const gridElement = document.getElementById('grid');
         const scoreElement = document.querySelector('.score-value');
@@ -434,6 +1015,14 @@
         
         // 初始化遊戲
         function initGame() {
+            // 播放新遊戲音效
+            gameAudio.playNewGame();
+            
+            // 初始化音效系統（用戶交互後）
+            if (!gameAudio.initialized) {
+                gameAudio.init();
+            }
+            
             // 創建4x4網格
             grid = Array(4).fill().map(() => Array(4).fill(0));
             
@@ -572,6 +1161,9 @@
         function undoMove() {
             if (undoStack.length === 0 || usedUndos <= 0) return;
             
+            // 播放撤銷音效
+            gameAudio.playUndo();
+            
             const previousState = undoStack.pop();
             grid = previousState.grid.map(row => [...row]);
             score = previousState.score;
@@ -619,6 +1211,9 @@
             
             // 如果有移動，添加新方塊並更新
             if (moved) {
+                // 播放移動音效
+                gameAudio.playMove();
+                
                 saveState();
                 addRandomTile();
                 moves++;
@@ -650,10 +1245,14 @@
                             if (grid[nextRow][col] !== 0) {
                                 if (grid[row][col] === grid[nextRow][col]) {
                                     // 合併方塊
-                                    grid[row][col] *= 2;
+                                    const mergedValue = grid[row][col] * 2;
+                                    grid[row][col] = mergedValue;
                                     grid[nextRow][col] = 0;
-                                    score += grid[row][col];
+                                    score += mergedValue;
                                     moved = true;
+                                    
+                                    // 播放合併音效
+                                    gameAudio.playMerge(mergedValue);
                                 }
                                 break;
                             }
@@ -692,10 +1291,14 @@
                             if (grid[nextRow][col] !== 0) {
                                 if (grid[row][col] === grid[nextRow][col]) {
                                     // 合併方塊
-                                    grid[row][col] *= 2;
+                                    const mergedValue = grid[row][col] * 2;
+                                    grid[row][col] = mergedValue;
                                     grid[nextRow][col] = 0;
-                                    score += grid[row][col];
+                                    score += mergedValue;
                                     moved = true;
+                                    
+                                    // 播放合併音效
+                                    gameAudio.playMerge(mergedValue);
                                 }
                                 break;
                             }
@@ -734,10 +1337,14 @@
                             if (grid[row][nextCol] !== 0) {
                                 if (grid[row][col] === grid[row][nextCol]) {
                                     // 合併方塊
-                                    grid[row][col] *= 2;
+                                    const mergedValue = grid[row][col] * 2;
+                                    grid[row][col] = mergedValue;
                                     grid[row][nextCol] = 0;
-                                    score += grid[row][col];
+                                    score += mergedValue;
                                     moved = true;
+                                    
+                                    // 播放合併音效
+                                    gameAudio.playMerge(mergedValue);
                                 }
                                 break;
                             }
@@ -776,10 +1383,14 @@
                             if (grid[row][nextCol] !== 0) {
                                 if (grid[row][col] === grid[row][nextCol]) {
                                     // 合併方塊
-                                    grid[row][col] *= 2;
+                                    const mergedValue = grid[row][col] * 2;
+                                    grid[row][col] = mergedValue;
                                     grid[row][nextCol] = 0;
-                                    score += grid[row][col];
+                                    score += mergedValue;
                                     moved = true;
+                                    
+                                    // 播放合併音效
+                                    gameAudio.playMerge(mergedValue);
                                 }
                                 break;
                             }
@@ -830,6 +1441,8 @@
                 for (let col = 0; col < 4; col++) {
                     if (grid[row][col] === 2048 && !gameWon) {
                         gameWon = true;
+                        // 播放勝利音效
+                        gameAudio.playWin();
                         showMessage('恭喜！', '你創造了2048方塊！你可以繼續遊戲以獲得更高分數。');
                     }
                 }
@@ -864,6 +1477,8 @@
             // 如果沒有空位且無法合併，遊戲結束
             if (!hasEmpty && !canMerge && !gameOver) {
                 gameOver = true;
+                // 播放遊戲結束音效
+                gameAudio.playGameOver();
                 showMessage('遊戲結束', `你的最終分數是：${score}。點擊「新遊戲」按鈕重新開始。`);
             }
         }
@@ -949,11 +1564,125 @@
             updateView();
         });
         
-        // 初始化遊戲
-        initGame();
+        // 虛擬控制按鈕事件
+        const virtualButtons = document.querySelectorAll('.d-pad-button');
+        virtualButtons.forEach(button => {
+            // 點擊事件
+            button.addEventListener('click', (e) => {
+                e.preventDefault();
+                const direction = button.dataset.direction;
+                
+                // 添加視覺反饋
+                button.style.transform = button.classList.contains('up') || button.classList.contains('down') 
+                    ? 'translateX(-50%) scale(0.9)' 
+                    : 'translateY(-50%) scale(0.9)';
+                
+                setTimeout(() => {
+                    button.style.transform = button.classList.contains('up') || button.classList.contains('down') 
+                        ? 'translateX(-50%) scale(1)' 
+                        : 'translateY(-50%) scale(1)';
+                }, 150);
+                
+                // 觸發移動
+                move(direction);
+                
+                // 觸覺反饋
+                if ('vibrate' in navigator) {
+                    navigator.vibrate(15);
+                }
+            });
+            
+            // 觸摸開始事件
+            button.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                button.style.transform = button.classList.contains('up') || button.classList.contains('down') 
+                    ? 'translateX(-50%) scale(0.85)' 
+                    : 'translateY(-50%) scale(0.85)';
+            });
+            
+            // 觸摸結束事件
+            button.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                const direction = button.dataset.direction;
+                move(direction);
+                
+                button.style.transform = button.classList.contains('up') || button.classList.contains('down') 
+                    ? 'translateX(-50%) scale(1)' 
+                    : 'translateY(-50%) scale(1)';
+                    
+                // 觸覺反饋
+                if ('vibrate' in navigator) {
+                    navigator.vibrate(20);
+                }
+            });
+        });
         
-        // 設置初始最高分
-        bestElement.textContent = bestScore;
+        // 確保DOM加載完成後初始化遊戲
+        function safeInit2048() {
+            try {
+                console.log('開始初始化2048遊戲...');
+                
+                // 檢查關鍵DOM元素
+                const gridElement = document.getElementById('grid');
+                const scoreElement = document.querySelector('.score-value');
+                const bestElement = document.querySelector('.best-value');
+                
+                if (!gridElement || !scoreElement || !bestElement) {
+                    console.error('找不到必要的DOM元素');
+                    showError('遊戲初始化失敗：找不到界面元素');
+                    return;
+                }
+                
+                // 從localStorage加載最高分
+                const savedBestScore = localStorage.getItem('bestScore2048');
+                if (savedBestScore) {
+                    bestScore = parseInt(savedBestScore, 10);
+                    console.log('載入最高分:', bestScore);
+                }
+                
+                // 初始化遊戲
+                initGame();
+                
+                // 設置初始最高分顯示
+                bestElement.textContent = bestScore;
+                console.log('2048遊戲初始化完成，最高分:', bestScore);
+                
+            } catch (error) {
+                console.error('2048遊戲初始化失敗:', error);
+                showError('2048遊戲初始化失敗: ' + error.message);
+            }
+        }
+        
+        // 錯誤顯示函數
+        function showError(message) {
+            const errorDiv = document.createElement('div');
+            errorDiv.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: #ff4757;
+                color: white;
+                padding: 20px;
+                border-radius: 10px;
+                font-family: Arial, sans-serif;
+                z-index: 9999;
+                text-align: center;
+            `;
+            errorDiv.innerHTML = `
+                <h3>⚠️ 錯誤</h3>
+                <p>${message}</p>
+                <button onclick="location.reload()" style="margin-top: 10px; padding: 5px 15px; background: white; color: #ff4757; border: none; border-radius: 5px; cursor: pointer;">重新載入</button>
+            `;
+            document.body.appendChild(errorDiv);
+        }
+        
+        // 等待DOM加載完成後初始化
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', safeInit2048);
+        } else {
+            safeInit2048();
+        }
     </script>
 </body>
 </html>

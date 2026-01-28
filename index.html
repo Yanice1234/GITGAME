@@ -1,47 +1,335 @@
 <!DOCTYPE html>
-<html lang="zh-HK">
+<html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>我的遊戲館</title>
+    <title>我的遊戲館 - 精選HTML5遊戲</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #1a1a2e;
-            color: white;
-            text-align: center;
-            padding: 40px;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-        h1 { margin-bottom: 30px; }
-        .games { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            color: white;
+            min-height: 100vh;
+            text-align: center;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            margin-bottom: 40px;
+            animation: fadeInDown 0.8s ease-out;
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            background: linear-gradient(90deg, #00d2ff, #3a7bd5, #00d2ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 15px;
+            text-shadow: 0 0 30px rgba(0, 210, 255, 0.3);
+            animation: gradient 3s ease infinite;
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.8;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+
+        .features {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 40px;
+            flex-wrap: wrap;
+            opacity: 0.9;
+        }
+
+        .feature {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .games {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+            animation: fadeInUp 0.8s ease-out;
+        }
+
         .game-card {
-            background: #2d2d44;
-            padding: 25px 35px;
-            border-radius: 10px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 30px;
+            border-radius: 15px;
             text-decoration: none;
             color: white;
-            transition: 0.3s;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(10px);
+            position: relative;
+            overflow: hidden;
         }
-        .game-card:hover { background: #3d3d5c; transform: scale(1.05); }
-        .icon { font-size: 2em; }
+
+        .game-card::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, #00d2ff, #3a7bd5, #00d2ff);
+            border-radius: 15px;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            z-index: -1;
+        }
+
+        .game-card:hover::before {
+            opacity: 1;
+        }
+
+        .game-card:hover {
+            transform: translateY(-5px) scale(1.02);
+            box-shadow: 0 15px 40px rgba(0, 210, 255, 0.3);
+        }
+
+        .icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            display: block;
+            animation: bounce 2s infinite;
+        }
+
+        .game-card:nth-child(1) .icon { animation-delay: 0s; }
+        .game-card:nth-child(2) .icon { animation-delay: 0.2s; }
+        .game-card:nth-child(3) .icon { animation-delay: 0.4s; }
+
+        .game-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #00d2ff;
+        }
+
+        .game-description {
+            font-size: 0.95rem;
+            opacity: 0.8;
+            line-height: 1.5;
+            margin-bottom: 15px;
+        }
+
+        .game-features {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+        }
+
+        .game-feature-tag {
+            background: rgba(0, 210, 255, 0.2);
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            border: 1px solid rgba(0, 210, 255, 0.4);
+        }
+
+        .play-button {
+            background: linear-gradient(90deg, #00d2ff, #3a7bd5);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 15px;
+            display: inline-block;
+        }
+
+        .play-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 20px rgba(0, 210, 255, 0.4);
+        }
+
+        .stats {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 25px;
+            margin-top: 40px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .stats h2 {
+            margin-bottom: 20px;
+            color: #00d2ff;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #00d2ff;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+            60% { transform: translateY(-5px); }
+        }
+
+        @media (max-width: 768px) {
+            h1 { font-size: 2.5rem; }
+            .games { grid-template-columns: 1fr; }
+            .features { flex-direction: column; align-items: center; }
+        }
     </style>
 </head>
 <body>
-    <h1>🎮 我的遊戲館</h1>
-    <div class="games">
-        <a href="game1.0.html" class="game-card">
-            <div class="icon">💠</div>
-            <div>俄羅斯方塊</div>
-        </a>
-        <a href="game2.0.html" class="game-card">
-            <div class="icon">🔢</div>
-            <div>2048</div>
-        </a>
-        <a href="game3.0.html" class="game-card">
-            <div class="icon">✨</div>
-            <div>星星閃避</div>
-        </a>
-        <!-- 加更多遊戲 -->
+    <div class="container">
+        <header>
+            <h1>🎮 我的遊戲館</h1>
+            <p class="subtitle">精選HTML5小遊戲，支持桌面和移動設備，暢快遊玩無需下載</p>
+            <div class="features">
+                <div class="feature">📱 手機適配</div>
+                <div class="feature">🎵 音效反饋</div>
+                <div class="feature">🏆 成就系統</div>
+                <div class="feature">💾 本地存檔</div>
+            </div>
+        </header>
+
+        <main>
+            <div class="games">
+                <a href="game1.0.html" class="game-card">
+                    <span class="icon">💠</span>
+                    <div class="game-title">俄羅斯方塊</div>
+                    <div class="game-description">經典的俄羅斯方塊遊戲，支援觸控操作，包含粒子特效和成就系統</div>
+                    <div class="game-features">
+                        <span class="game-feature-tag">觸控操作</span>
+                        <span class="game-feature-tag">粒子特效</span>
+                        <span class="game-feature-tag">音效系統</span>
+                        <span class="game-feature-tag">成就系統</span>
+                    </div>
+                    <span class="play-button">開始遊戲</span>
+                    <div class="status" id="game1-status">狀態：未知</div>
+                </a>
+
+                <a href="game2.0.enhanced.html" class="game-card">
+                    <span class="icon">🔢</span>
+                    <div class="game-title">2048 增強版</div>
+                    <div class="game-description">全新改進的2048遊戲，完整觸控支持、粒子特效和成就系統</div>
+                    <div class="game-features">
+                        <span class="game-feature-tag">觸控操作</span>
+                        <span class="game-feature-tag">粒子特效</span>
+                        <span class="game-feature-tag">成就系統</span>
+                        <span class="game-feature-tag">音效反饋</span>
+                        <span class="game-feature-tag">虛擬控制器</span>
+                    </div>
+                    <span class="play-button">開始遊戲</span>
+                    <div class="status" id="game2048-status">最高分：0</div>
+                </a>
+
+                <a href="game3.0.html" class="game-card">
+                    <span class="icon">✨</span>
+                    <div class="game-title">星星閃避</div>
+                    <div class="game-description">增強版手勢控制遊戲，新增成就系統和性能監控</div>
+                    <div class="game-features">
+                        <span class="game-feature-tag">手勢控制</span>
+                        <span class="game-feature-tag">AI識別</span>
+                        <span class="game-feature-tag">成就系統</span>
+                        <span class="game-feature-tag">性能監控</span>
+                        <span class="game-feature-tag">粒子特效</span>
+                    </div>
+                    <span class="play-button">開始遊戲</span>
+                    <div class="status" id="game3-status">狀態：未知</div>
+                </a>
+            </div>
+
+            <div class="stats">
+                <h2>📊 遊戲統計</h2>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-number">3</div>
+                        <div class="stat-label">精選遊戲</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">100%</div>
+                        <div class="stat-label">免費遊玩</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">0</div>
+                        <div class="stat-label">下載等待</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">24/7</div>
+                        <div class="stat-label">隨時可玩</div>
+                    </div>
+                </div>
+            </div>
+        </main>
     </div>
 </body>
 </html>
