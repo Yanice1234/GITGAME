@@ -481,8 +481,10 @@
 </div>
 
 <script>
-    // --- 遊戲設定與變數 ---
-    const videoElement = document.getElementById('input-video');
+    // 等待DOM完全加載
+    document.addEventListener('DOMContentLoaded', function() {
+        // --- 遊戲設定與變數 ---
+        const videoElement = document.getElementById('input-video');
     const gameCanvas = document.getElementById('game-canvas');
     const particlesCanvas = document.getElementById('particles-canvas');
     const gameCtx = gameCanvas.getContext('2d');
@@ -2081,6 +2083,7 @@
         startBtn.addEventListener('click', startGame);
         restartBtn.addEventListener('click', startGame);
 
+    }); // DOMContentLoaded 結束
 </script>
 
 <!-- 成就通知 -->

@@ -169,3 +169,9 @@ When adding a new game:
 - Test responsive design using device emulation in dev tools
 
 Remember: This repository prioritizes simplicity and direct browser compatibility over complex build processes. Keep it simple, functional, and accessible.
+
+## Cursor and Copilot Rules
+- If a repository contains .cursor/rules/ or .cursorrules, ensure agents follow them strictly.
+- If .github/copilot-instructions.md exists, read and respect its guidance during code generation tasks.
+- Always prefer explicit, self-contained changes over broad refactors; document intent clearly.
+- When in doubt, ask a targeted question and propose a minimal safe change as default.
