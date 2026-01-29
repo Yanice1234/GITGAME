@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>高級2048遊戲</title>
+    <!-- 遊戲進度保存系統 -->
+    <script src="game-progress.js"></script>
+    <!-- 移動設備優化系統 -->
+    <script src="mobile-optimizer.js"></script>
     <style>
         * {
             margin: 0;
@@ -362,17 +366,17 @@
             transform: translate(-50%, -50%);
         }
 
-        @media (max-width: 600px) {
+        @media (max-width: 768px) {
             .grid {
-                width: 300px;
-                height: 300px;
-                gap: 9px;
-                padding: 9px;
+                width: 320px;
+                height: 320px;
+                gap: 10px;
+                padding: 10px;
             }
             
             .tile {
-                width: 57px;
-                height: 57px;
+                width: 65px;
+                height: 65px;
                 font-size: 1.8rem;
             }
             
@@ -381,12 +385,75 @@
             }
             
             .score-container, .moves-container, .best-container {
-                min-width: 120px;
-                padding: 12px 18px;
+                min-width: 110px;
+                padding: 10px 15px;
+                margin-bottom: 10px;
+            }
+            
+            .game-info {
+                flex-direction: column;
+                align-items: center;
             }
             
             .virtual-controls {
                 display: block; /* 在移動設備上顯示虛擬控制 */
+                margin: 20px 0;
+            }
+            
+            .d-pad {
+                width: 200px;
+                height: 200px;
+            }
+            
+            .d-pad-button {
+                width: 60px;
+                height: 60px;
+                font-size: 2rem;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            button {
+                width: 100%;
+                max-width: 250px;
+                margin-bottom: 10px;
+            }
+            
+            .instructions {
+                font-size: 0.9rem;
+                padding: 15px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .grid {
+                width: 280px;
+                height: 280px;
+                gap: 8px;
+                padding: 8px;
+            }
+            
+            .tile {
+                width: 56px;
+                height: 56px;
+                font-size: 1.6rem;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .score-container, .moves-container, .best-container {
+                min-width: 100px;
+                padding: 8px 12px;
+                font-size: 0.9rem;
+            }
+            
+            .score-value, .moves-value, .best-value {
+                font-size: 1.5rem;
             }
             
             .d-pad {
@@ -395,9 +462,13 @@
             }
             
             .d-pad-button {
-                width: 55px;
-                height: 55px;
+                width: 50px;
+                height: 50px;
                 font-size: 1.8rem;
+            }
+            
+            .control-info {
+                font-size: 0.8rem;
             }
         }
         
@@ -405,6 +476,46 @@
             .virtual-controls {
                 display: block; /* 在觸摸設備上顯示虛擬控制 */
             }
+            
+            /* 改善觸摸體驗 */
+            button, .d-pad-button {
+                min-height: 44px; /* Apple人機界面指南建議的最小觸摸目標 */
+            }
+            
+            .tile {
+                user-select: none;
+                -webkit-user-select: none;
+                -moz-user-select: none;
+                -ms-user-select: none;
+            }
+        }
+        
+        /* 防止移動設備上的縮放 */
+        @media (max-width: 768px) {
+            body {
+                touch-action: manipulation;
+            }
+            
+            .grid {
+                touch-action: none;
+            }
+        }
+        
+        /* 改善虛擬控制按鈕的反饋 */
+        .d-pad-button:active {
+            transform: scale(0.85);
+            transition: transform 0.1s ease;
+        }
+        
+        /* 添加觸摸反饋動畫 */
+        @keyframes touchFeedback {
+            0% { transform: scale(1); }
+            50% { transform: scale(0.9); }
+            100% { transform: scale(1); }
+        }
+        
+        .touch-feedback {
+            animation: touchFeedback 0.2s ease;
         }
     </style>
 </head>
@@ -493,7 +604,8 @@
         // 遊戲狀態變量
         let grid = [];
         let score = 0;
-        let bestScore = localStorage.getItem('bestScore2048') || 0;
+        // 從遊戲進度系統加載最高分
+        let bestScore = GameProgress.progress.games.game2048.highScore || 0;
         let moves = 0;
         let gameOver = false;
         let gameWon = false;
@@ -861,6 +973,130 @@
         
         // 初始化移動控制
         const mobileControls = new MobileControls();
+        
+        // 移動設備優化
+        class MobileOptimizer {
+            constructor() {
+                this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                this.isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+                this.init();
+            }
+            
+            init() {
+                if (this.isMobile || this.isTouchDevice) {
+                    this.optimizeForTouch();
+                }
+                
+                // 防止移動設備上的縮放
+                this.preventZoom();
+                
+                // 添加觸摸反饋
+                this.addTouchFeedback();
+            }
+            
+            optimizeForTouch() {
+                console.log('優化觸摸設備體驗');
+                
+                // 確保虛擬控制可見
+                const virtualControls = document.getElementById('virtual-controls');
+                if (virtualControls) {
+                    virtualControls.style.display = 'block';
+                }
+                
+                // 調整動畫速度
+                document.documentElement.style.setProperty('--animation-duration', '0.1s');
+                
+                // 添加觸摸提示
+                this.showTouchHint();
+            }
+            
+            preventZoom() {
+                // 防止雙擊縮放
+                let lastTouchEnd = 0;
+                document.addEventListener('touchend', (e) => {
+                    const now = Date.now();
+                    if (now - lastTouchEnd <= 300) {
+                        e.preventDefault();
+                    }
+                    lastTouchEnd = now;
+                }, false);
+                
+                // 防止手勢縮放
+                document.addEventListener('gesturestart', (e) => {
+                    e.preventDefault();
+                });
+            }
+            
+            addTouchFeedback() {
+                // 為所有按鈕添加觸摸反饋
+                const buttons = document.querySelectorAll('button, .d-pad-button');
+                buttons.forEach(button => {
+                    button.addEventListener('touchstart', () => {
+                        button.classList.add('touch-feedback');
+                    });
+                    
+                    button.addEventListener('touchend', () => {
+                        setTimeout(() => {
+                            button.classList.remove('touch-feedback');
+                        }, 200);
+                    });
+                });
+            }
+            
+            showTouchHint() {
+                // 只在第一次訪問時顯示提示
+                if (!localStorage.getItem('2048_touch_hint_shown')) {
+                    setTimeout(() => {
+                        const hint = document.createElement('div');
+                        hint.className = 'touch-hint';
+                        hint.innerHTML = `
+                            <div style="
+                                position: fixed;
+                                top: 50%;
+                                left: 50%;
+                                transform: translate(-50%, -50%);
+                                background: rgba(0, 0, 0, 0.9);
+                                color: white;
+                                padding: 20px;
+                                border-radius: 15px;
+                                z-index: 10000;
+                                max-width: 300px;
+                                text-align: center;
+                                border: 2px solid #00d2ff;
+                            ">
+                                <h3 style="margin-top: 0; color: #00d2ff;">觸控提示</h3>
+                                <p>使用虛擬方向鍵或滑動手勢控制遊戲</p>
+                                <p>👆 點擊按鈕控制方向</p>
+                                <p>↔️ 在遊戲區域滑動控制</p>
+                                <button style="
+                                    background: #00d2ff;
+                                    color: white;
+                                    border: none;
+                                    padding: 10px 20px;
+                                    border-radius: 20px;
+                                    margin-top: 15px;
+                                    cursor: pointer;
+                                " onclick="this.parentElement.parentElement.remove(); localStorage.setItem('2048_touch_hint_shown', 'true');">
+                                    知道了
+                                </button>
+                            </div>
+                        `;
+                        document.body.appendChild(hint);
+                    }, 1000);
+                }
+            }
+            
+            isMobileDevice() {
+                return this.isMobile;
+            }
+            
+            isTouchDevice() {
+                return this.isTouchDevice;
+            }
+        }
+        
+        // 初始化移動優化器
+        const mobileOptimizer = new MobileOptimizer();
         
         // 性能優化系統
         class PerformanceOptimizer {
@@ -1424,7 +1660,8 @@
             // 更新最高分
             if (score > bestScore) {
                 bestScore = score;
-                localStorage.setItem('bestScore2048', bestScore);
+                // 使用遊戲進度系統保存最高分
+                GameProgress.update2048Progress(score, moves);
                 bestElement.textContent = bestScore;
             }
         }
@@ -1480,6 +1717,9 @@
                 // 播放遊戲結束音效
                 gameAudio.playGameOver();
                 showMessage('遊戲結束', `你的最終分數是：${score}。點擊「新遊戲」按鈕重新開始。`);
+                
+                // 遊戲結束時保存最終進度
+                GameProgress.update2048Progress(score, moves);
             }
         }
         

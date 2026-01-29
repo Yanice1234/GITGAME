@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>俄羅斯方塊 - 增強版</title>
+    <!-- 遊戲進度保存系統 -->
+    <script src="game-progress.js"></script>
+    <!-- 移動設備優化系統 -->
+    <script src="mobile-optimizer.js"></script>
     <style>
         * {
             margin: 0;
@@ -268,6 +272,194 @@
             font-size: 0.9rem;
         }
         
+        /* 移動設備虛擬控制 */
+        .mobile-controls {
+            display: none;
+            margin-top: 20px;
+            text-align: center;
+        }
+        
+        .mobile-controls.active {
+            display: block;
+        }
+        
+        .control-info {
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+            opacity: 0.7;
+        }
+        
+        .control-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 10px;
+            max-width: 300px;
+            margin: 0 auto;
+        }
+        
+        .control-button {
+            width: 70px;
+            height: 70px;
+            border: none;
+            border-radius: 15px;
+            background: linear-gradient(135deg, rgba(0, 210, 255, 0.8), rgba(58, 123, 213, 0.8));
+            color: white;
+            font-size: 1.8rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 15px rgba(0, 210, 255, 0.3);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .control-button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(0, 210, 255, 0.5);
+            background: linear-gradient(135deg, rgba(0, 210, 255, 1), rgba(58, 123, 213, 1));
+        }
+        
+        .control-button:active {
+            transform: scale(0.95);
+            box-shadow: 0 2px 10px rgba(0, 210, 255, 0.3);
+        }
+        
+        .control-button.rotate {
+            background: linear-gradient(135deg, rgba(255, 0, 128, 0.8), rgba(255, 77, 43, 0.8));
+            box-shadow: 0 4px 15px rgba(255, 0, 128, 0.3);
+        }
+        
+        .control-button.drop {
+            background: linear-gradient(135deg, rgba(255, 204, 0, 0.8), rgba(255, 153, 0, 0.8));
+            box-shadow: 0 4px 15px rgba(255, 204, 0, 0.3);
+        }
+        
+        .control-button.left {
+            grid-column: 1;
+            grid-row: 2;
+        }
+        
+        .control-button.right {
+            grid-column: 3;
+            grid-row: 2;
+        }
+        
+        .control-button.down {
+            grid-column: 2;
+            grid-row: 3;
+        }
+        
+        .control-button.rotate {
+            grid-column: 2;
+            grid-row: 1;
+        }
+        
+        .control-button.drop {
+            grid-column: 2;
+            grid-row: 2;
+        }
+        
+        /* 觸摸手勢指示器 */
+        .gesture-indicator {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 3rem;
+            color: rgba(0, 210, 255, 0.8);
+            z-index: 1000;
+            pointer-events: none;
+            animation: swipeFade 0.5s ease-out forwards;
+            display: none;
+        }
+        
+        @keyframes swipeFade {
+            0% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(0.5);
+            }
+            50% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1.2);
+            }
+            100% {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(1.5);
+            }
+        }
+        
+        /* 移動設備優化 */
+        @media (max-width: 768px) {
+            .game-container {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .left-panel, .right-panel {
+                width: 100%;
+                max-width: 500px;
+                margin-bottom: 20px;
+            }
+            
+            canvas {
+                width: 100%;
+                max-width: 300px;
+                height: auto;
+                aspect-ratio: 1/2;
+            }
+            
+            #next-piece {
+                width: 120px;
+                height: 120px;
+            }
+            
+            h1 {
+                font-size: 2.2rem;
+            }
+            
+            .subtitle {
+                font-size: 1rem;
+            }
+            
+            .mobile-controls {
+                display: block;
+            }
+            
+            .buttons {
+                flex-direction: column;
+            }
+            
+            button {
+                padding: 12px 0;
+                font-size: 1rem;
+                margin-bottom: 10px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 1.8rem;
+            }
+            
+            .control-button {
+                width: 60px;
+                height: 60px;
+                font-size: 1.5rem;
+            }
+            
+            .control-grid {
+                max-width: 250px;
+            }
+            
+            .info-item {
+                font-size: 1rem;
+            }
+        }
+        
         .effect-notification {
             position: absolute;
             top: 50%;
@@ -429,6 +621,21 @@
     <div class="footer">
         使用HTML5 Canvas開發 | 俄羅斯方塊經典遊戲增強版
     </div>
+    
+    <!-- 移動設備虛擬控制 -->
+    <div class="mobile-controls" id="mobile-controls">
+        <div class="control-info">觸控按鈕控制</div>
+        <div class="control-grid">
+            <button class="control-button rotate" id="rotate-btn">↻</button>
+            <button class="control-button left" id="left-btn">←</button>
+            <button class="control-button drop" id="drop-btn">↓</button>
+            <button class="control-button right" id="right-btn">→</button>
+            <button class="control-button down" id="down-btn">↓</button>
+        </div>
+    </div>
+    
+    <!-- 手勢指示器 -->
+    <div class="gesture-indicator" id="gesture-indicator"></div>
 
     <script>
         // 遊戲常量
@@ -495,7 +702,8 @@
         let nextCtx = nextCanvas.getContext('2d');
         let board = [];
         let score = 0;
-        let highScore = localStorage.getItem('tetrisHighScore') || 0;
+        // 從遊戲進度系統加載最高分
+        let highScore = GameProgress.progress.games.tetris.highScore || 0;
         let level = 1;
         let lines = 0;
         let fullClears = 0;
@@ -811,6 +1019,9 @@
                 document.getElementById('game-status').style.color = '#ff003c';
                 // 遊戲結束時停止特效
                 stopSpecialEffect();
+                
+                // 遊戲結束時保存最終進度
+                GameProgress.updateTetrisProgress(score, level, lines, fullClears);
             }
         }
 
@@ -908,7 +1119,8 @@
             // 更新最高分
             if (score > highScore) {
                 highScore = score;
-                localStorage.setItem('tetrisHighScore', highScore);
+                // 使用遊戲進度系統保存最高分
+                GameProgress.updateTetrisProgress(score, level, lines, fullClears);
                 document.getElementById('high-score').textContent = highScore;
                 document.getElementById('high-score').classList.add('score-animation');
                 setTimeout(() => {
@@ -1056,6 +1268,159 @@
                 document.getElementById('pause-btn').textContent = '暫停遊戲';
             }
         }
+        
+        // 移動設備控制系統
+        class MobileControls {
+            constructor() {
+                this.touchStartX = 0;
+                this.touchStartY = 0;
+                this.touchEndX = 0;
+                this.touchEndY = 0;
+                this.minSwipeDistance = 50;
+                this.isEnabled = false;
+                this.init();
+            }
+            
+            init() {
+                // 檢測是否為移動設備
+                this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                
+                // 顯示/隱藏虛擬控制按鈕
+                const mobileControls = document.getElementById('mobile-controls');
+                if (this.isMobile) {
+                    mobileControls.classList.add('active');
+                    this.isEnabled = true;
+                }
+                
+                // 綁定虛擬控制按鈕事件
+                this.bindVirtualButtons();
+                
+                // 綁定觸摸手勢事件
+                this.bindTouchGestures();
+            }
+            
+            bindVirtualButtons() {
+                document.getElementById('left-btn').addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    playerMove(-1);
+                    this.showGestureIndicator('←');
+                });
+                
+                document.getElementById('right-btn').addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    playerMove(1);
+                    this.showGestureIndicator('→');
+                });
+                
+                document.getElementById('down-btn').addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    playerDrop();
+                    this.showGestureIndicator('↓');
+                });
+                
+                document.getElementById('rotate-btn').addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    playerRotate(1);
+                    this.showGestureIndicator('↻');
+                });
+                
+                document.getElementById('drop-btn').addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    playerHardDrop();
+                    this.showGestureIndicator('↓');
+                });
+                
+                // 添加點擊事件以支持桌面測試
+                document.getElementById('left-btn').addEventListener('click', () => playerMove(-1));
+                document.getElementById('right-btn').addEventListener('click', () => playerMove(1));
+                document.getElementById('down-btn').addEventListener('click', () => playerDrop());
+                document.getElementById('rotate-btn').addEventListener('click', () => playerRotate(1));
+                document.getElementById('drop-btn').addEventListener('click', () => playerHardDrop());
+            }
+            
+            bindTouchGestures() {
+                const gameBoard = document.querySelector('.game-board');
+                
+                gameBoard.addEventListener('touchstart', (e) => {
+                    if (!this.isEnabled || gameOver || paused) return;
+                    
+                    const touch = e.touches[0];
+                    this.touchStartX = touch.clientX;
+                    this.touchStartY = touch.clientY;
+                    e.preventDefault();
+                }, { passive: false });
+                
+                gameBoard.addEventListener('touchend', (e) => {
+                    if (!this.isEnabled || gameOver || paused) return;
+                    
+                    if (e.changedTouches.length > 0) {
+                        const touch = e.changedTouches[0];
+                        this.touchEndX = touch.clientX;
+                        this.touchEndY = touch.clientY;
+                        this.handleSwipe();
+                    }
+                    e.preventDefault();
+                }, { passive: false });
+            }
+            
+            handleSwipe() {
+                const deltaX = this.touchEndX - this.touchStartX;
+                const deltaY = this.touchEndY - this.touchStartY;
+                const absDeltaX = Math.abs(deltaX);
+                const absDeltaY = Math.abs(deltaY);
+                
+                // 確保滑動距離達到最小值
+                if (Math.max(absDeltaX, absDeltaY) < this.minSwipeDistance) return;
+                
+                // 確定滑動方向
+                if (absDeltaX > absDeltaY) {
+                    // 水平滑動
+                    if (deltaX > 0) {
+                        playerMove(1);
+                        this.showGestureIndicator('→');
+                    } else {
+                        playerMove(-1);
+                        this.showGestureIndicator('←');
+                    }
+                } else {
+                    // 垂直滑動
+                    if (deltaY > 0) {
+                        playerDrop();
+                        this.showGestureIndicator('↓');
+                    } else {
+                        playerRotate(1);
+                        this.showGestureIndicator('↻');
+                    }
+                }
+                
+                // 觸覺反饋
+                if ('vibrate' in navigator) {
+                    navigator.vibrate(10);
+                }
+            }
+            
+            showGestureIndicator(symbol) {
+                const indicator = document.getElementById('gesture-indicator');
+                indicator.textContent = symbol;
+                indicator.style.display = 'block';
+                
+                // 0.5秒後隱藏指示器
+                setTimeout(() => {
+                    indicator.style.display = 'none';
+                }, 500);
+            }
+            
+            enable() {
+                this.isEnabled = true;
+            }
+            
+            disable() {
+                this.isEnabled = false;
+            }
+        }
+        
+        // 初始化移動控制
+        const mobileControls = new MobileControls();
         
         // 防止遊戲區域內的觸摸滾動
         function preventTouchScroll(e) {

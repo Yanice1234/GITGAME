@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>移動設備優化測試</title>
+    <script src="mobile-optimizer.js"></script>
+    <style>
+        :root {
+            --primary-color: #007bff;
+            --success-color: #28a745;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            color: #333;
+            min-height: 100vh;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: var(--primary-color);
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 2.5rem;
+        }
+        
+        .subtitle {
+            color: #666;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 1.1rem;
+        }
+        
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border-radius: 10px;
+            background: #f8f9fa;
+            border-left: 4px solid var(--primary-color);
+        }
+        
+        .test-section h2 {
+            color: var(--primary-color);
+            margin-bottom: 15px;
+            font-size: 1.5rem;
+        }
+        
+        .device-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .info-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        
+        .info-label {
+            font-weight: bold;
+            color: #666;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+        }
+        
+        .info-value {
+            font-size: 1.2rem;
+            color: #333;
+        }
+        
+        .info-value.true {
+            color: var(--success-color);
+            font-weight: bold;
+        }
+        
+        .info-value.false {
+            color: var(--danger-color);
+            font-weight: bold;
+        }
+        
+        .game-tests {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+        
+        .game-test {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+            border: 2px solid transparent;
+        }
+        
+        .game-test:hover {
+            transform: translateY(-5px);
+            border-color: var(--primary-color);
+        }
+        
+        .game-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+        
+        .game-title {
+            font-size: 1.3rem;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        .game-desc {
+            color: #666;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+        }
+        
+        .test-btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+        
+        .test-btn:hover {
+            background: #0056b3;
+            transform: scale(1.05);
+        }
+        
+        .test-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .optimization-status {
+            margin-top: 30px;
+            padding: 20px;
+            background: #e8f4fd;
+            border-radius: 10px;
+            border-left: 4px solid var(--primary-color);
+        }
+        
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .status-item:last-child {
+            border-bottom: none;
+        }
+        
+        .status-label {
+            font-weight: bold;
+        }
+        
+        .status-value {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: bold;
+        }
+        
+        .status-optimized {
+            background: var(--success-color);
+            color: white;
+        }
+        
+        .status-partial {
+            background: var(--warning-color);
+            color: #333;
+        }
+        
+        .status-none {
+            background: var(--danger-color);
+            color: white;
+        }
+        
+        .touch-test {
+            margin-top: 30px;
+            padding: 20px;
+            background: #fff8e1;
+            border-radius: 10px;
+            text-align: center;
+            border: 2px dashed var(--warning-color);
+        }
+        
+        .touch-area {
+            width: 200px;
+            height: 200px;
+            background: var(--primary-color);
+            border-radius: 50%;
+            margin: 20px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.2s ease;
+        }
+        
+        .touch-area:active {
+            transform: scale(0.9);
+            background: #0056b3;
+        }
+        
+        .test-result {
+            margin-top: 10px;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .device-info {
+                grid-template-columns: 1fr;
+            }
+            
+            .game-tests {
+                grid-template-columns: 1fr;
+            }
+            
+            .touch-area {
+                width: 150px;
+                height: 150px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            body {
+                padding: 10px;
+            }
+            
+            .container {
+                padding: 10px;
+            }
+            
+            h1 {
+                font-size: 1.8rem;
+            }
+            
+            .test-section {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>移動設備優化測試</h1>
+        <p class="subtitle">測試所有遊戲在移動設備上的表現和優化效果</p>
+        
+        <div class="test-section">
+            <h2>設備檢測結果</h2>
+            <div class="device-info" id="device-info">
+                <!-- 設備信息將由JavaScript填充 -->
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>遊戲測試</h2>
+            <div class="game-tests">
+                <div class="game-test">
+                    <div class="game-icon">🧩</div>
+                    <div class="game-title">俄羅斯方塊</div>
+                    <div class="game-desc">測試觸摸控制和虛擬按鈕</div>
+                    <button class="test-btn" onclick="testGame('tetris')">測試遊戲</button>
+                </div>
+                
+                <div class="game-test">
+                    <div class="game-icon">🔢</div>
+                    <div class="game-title">2048遊戲</div>
+                    <div class="game-desc">測試滑動手勢和虛擬控制</div>
+                    <button class="test-btn" onclick="testGame('2048')">測試遊戲</button>
+                </div>
+                
+                <div class="game-test">
+                    <div class="game-icon">⭐</div>
+                    <div class="game-title">星星閃避</div>
+                    <div class="game-desc">測試觸摸和手勢控制</div>
+                    <button class="test-btn" onclick="testGame('handgame')">測試遊戲</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="optimization-status">
+            <h2>優化狀態</h2>
+            <div id="optimization-status">
+                <!-- 優化狀態將由JavaScript填充 -->
+            </div>
+        </div>
+        
+        <div class="touch-test">
+            <h2>觸摸響應測試</h2>
+            <p>點擊或觸摸下面的圓圈測試觸摸響應</p>
+            <div class="touch-area" id="touch-area">
+                點擊我
+            </div>
+            <div class="test-result" id="touch-result">等待測試...</div>
+        </div>
+    </div>
+
+    <script>
+        // 顯示設備信息
+        function displayDeviceInfo() {
+            const deviceInfo = window.MobileOptimizer.getDeviceInfo();
+            const container = document.getElementById('device-info');
+            
+            const infoItems = [
+                { label: '設備類型', value: deviceInfo.type },
+                { label: '移動設備', value: deviceInfo.isMobile, isBoolean: true },
+                { label: '平板設備', value: deviceInfo.isTablet, isBoolean: true },
+                { label: '觸摸設備', value: deviceInfo.isTouch, isBoolean: true },
+                { label: '低端設備', value: deviceInfo.isLowEnd, isBoolean: true },
+                { label: '屏幕分辨率', value: `${deviceInfo.screen.width} × ${deviceInfo.screen.height}` },
+                { label: '設備方向', value: deviceInfo.orientation },
+                { label: '瀏覽器', value: `${deviceInfo.browser.browser} v${deviceInfo.browser.version}` }
+            ];
+            
+            container.innerHTML = infoItems.map(item => `
+                <div class="info-item">
+                    <div class="info-label">${item.label}</div>
+                    <div class="info-value ${item.isBoolean ? (item.value ? 'true' : 'false') : ''}">
+                        ${item.isBoolean ? (item.value ? '是' : '否') : item.value}
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // 顯示優化狀態
+        function displayOptimizationStatus() {
+            const deviceInfo = window.MobileOptimizer.getDeviceInfo();
+            const container = document.getElementById('optimization-status');
+            
+            const optimizations = [
+                { 
+                    label: '觸摸優化', 
+                    status: deviceInfo.isTouch ? 'optimized' : 'none',
+                    description: deviceInfo.isTouch ? '已啟用觸摸反饋和目標大小優化' : '非觸摸設備，未啟用'
+                },
+                { 
+                    label: '性能優化', 
+                    status: deviceInfo.isLowEnd ? 'optimized' : 'partial',
+                    description: deviceInfo.isLowEnd ? '已啟用低端設備優化' : '標準性能設置'
+                },
+                { 
+                    label: '移動布局', 
+                    status: deviceInfo.isMobile ? 'optimized' : 'none',
+                    description: deviceInfo.isMobile ? '已調整布局適應小屏幕' : '桌面布局'
+                },
+                { 
+                    label: '防止縮放', 
+                    status: deviceInfo.isTouch ? 'optimized' : 'none',
+                    description: deviceInfo.isTouch ? '已防止雙擊縮放和手勢縮放' : '未啟用'
+                },
+                { 
+                    label: 'CSS類添加', 
+                    status: (deviceInfo.isMobile || deviceInfo.isTouch) ? 'optimized' : 'partial',
+                    description: (deviceInfo.isMobile || deviceInfo.isTouch) ? '已添加移動設備CSS類' : '僅添加基礎CSS類'
+                }
+            ];
+            
+            container.innerHTML = optimizations.map(opt => `
+                <div class="status-item">
+                    <div class="status-label">${opt.label}</div>
+                    <div class="status-value status-${opt.status}">
+                        ${opt.status === 'optimized' ? '已優化' : 
+                          opt.status === 'partial' ? '部分優化' : '未優化'}
+                    </div>
+                </div>
+                <div style="font-size: 0.9rem; color: #666; margin-bottom: 10px;">${opt.description}</div>
+            `).join('');
+        }
+        
+        // 測試遊戲
+        function testGame(gameType) {
+            let gameUrl = '';
+            let gameName = '';
+            
+            switch(gameType) {
+                case 'tetris':
+                    gameUrl = 'game1.0.html';
+                    gameName = '俄羅斯方塊';
+                    break;
+                case '2048':
+                    gameUrl = 'game2.0.html';
+                    gameName = '2048遊戲';
+                    break;
+                case 'handgame':
+                    gameUrl = 'game3.0.html';
+                    gameName = '星星閃避遊戲';
+                    break;
+            }
+            
+            // 應用遊戲特定優化
+            window.MobileOptimizer.optimizeForGame(gameType);
+            
+            // 顯示測試消息
+            alert(`正在打開${gameName}...\n請測試以下功能：\n1. 觸摸控制是否正常\n2. 虛擬按鈕是否顯示\n3. 遊戲是否流暢運行\n4. 布局是否適應屏幕`);
+            
+            // 打開遊戲頁面
+            window.open(gameUrl, '_blank');
+        }
+        
+        // 觸摸測試
+        function setupTouchTest() {
+            const touchArea = document.getElementById('touch-area');
+            const touchResult = document.getElementById('touch-result');
+            
+            let touchCount = 0;
+            let lastTouchTime = 0;
+            
+            touchArea.addEventListener('click', () => {
+                touchCount++;
+                const now = Date.now();
+                const timeDiff = now - lastTouchTime;
+                lastTouchTime = now;
+                
+                touchResult.textContent = `點擊次數: ${touchCount} | 上次點擊間隔: ${timeDiff}ms`;
+                touchArea.textContent = `點擊 ${touchCount}`;
+                
+                // 添加觸摸反饋
+                touchArea.style.transform = 'scale(0.9)';
+                setTimeout(() => {
+                    touchArea.style.transform = 'scale(1)';
+                }, 100);
+            });
+            
+            // 觸摸設備特定事件
+            touchArea.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                touchArea.style.backgroundColor = '#0056b3';
+            });
+            
+            touchArea.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                touchArea.style.backgroundColor = '';
+            });
+        }
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            // 等待MobileOptimizer初始化
+            setTimeout(() => {
+                displayDeviceInfo();
+                displayOptimizationStatus();
+                setupTouchTest();
+                
+                // 添加CSS類測試
+                const htmlClasses = document.documentElement.className;
+                console.log('HTML類:', htmlClasses);
+                
+                // 顯示當前應用的CSS類
+                const classInfo = document.createElement('div');
+                classInfo.className = 'test-section';
+                classInfo.innerHTML = `
+                    <h2>應用的CSS類</h2>
+                    <p>當前HTML元素應用的類: <code>${htmlClasses}</code></p>
+                    <p>這些類用於針對不同設備應用不同的樣式</p>
+                `;
+                document.querySelector('.container').appendChild(classInfo);
+                
+            }, 500);
+        });
+        
+        // 監聽移動優化器事件
+        document.addEventListener('mobileoptimizer:orientationchange', (e) => {
+            console.log('方向變化事件:', e.detail);
+            displayDeviceInfo();
+        });
+        
+        document.addEventListener('mobileoptimizer:resize', (e) => {
+            console.log('大小變化事件:', e.detail);
+            displayDeviceInfo();
+        });
+    </script>
+</body>
+</html>

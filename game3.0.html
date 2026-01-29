@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>體感星星大冒險 - 手掌控制版</title>
+    <!-- 遊戲進度保存系統 -->
+    <script src="game-progress.js"></script>
+    <!-- 移動設備優化系統 -->
+    <script src="mobile-optimizer.js"></script>
     <!-- 引入 MediaPipe Hands 與 Camera Utils -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
@@ -144,6 +148,9 @@
             
             #hud {
                 font-size: 18px;
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
             }
             
             .overlay h1 {
@@ -158,6 +165,142 @@
                 font-size: 10px;
                 padding: 5px;
             }
+            
+            .control-options {
+                max-width: 100%;
+            }
+            
+            .option-content {
+                padding: 12px 15px;
+            }
+            
+            .option-icon {
+                font-size: 1.5rem;
+                width: 40px;
+            }
+            
+            .tutorial-icons {
+                gap: 15px;
+            }
+            
+            .icon-box {
+                width: 50px;
+                height: 50px;
+                font-size: 24px;
+            }
+            
+            .btn {
+                padding: 12px 30px;
+                font-size: 20px;
+            }
+            
+            /* 改善觸摸目標大小 */
+            .control-option {
+                min-height: 60px;
+            }
+            
+            /* 防止攝影機在移動設備上消耗過多資源 */
+            .camera-view {
+                opacity: 0.2;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .overlay h1 {
+                font-size: 1.8rem;
+            }
+            
+            .btn {
+                padding: 10px 25px;
+                font-size: 18px;
+            }
+            
+            .control-options {
+                gap: 10px;
+            }
+            
+            .option-content {
+                padding: 10px 12px;
+            }
+            
+            .option-title {
+                font-size: 0.9rem;
+            }
+            
+            .option-desc {
+                font-size: 0.8rem;
+            }
+            
+            .tutorial-icons {
+                gap: 10px;
+            }
+            
+            .icon-box {
+                width: 40px;
+                height: 40px;
+                font-size: 20px;
+            }
+            
+            #hud {
+                font-size: 16px;
+            }
+        }
+        
+        /* 觸摸設備優化 */
+        @media (hover: none) and (pointer: coarse) {
+            /* 改善觸摸反饋 */
+            .btn:active, .control-option:active .option-content {
+                transform: scale(0.95);
+                transition: transform 0.1s ease;
+            }
+            
+            /* 防止文本選擇 */
+            * {
+                -webkit-tap-highlight-color: transparent;
+                -webkit-touch-callout: none;
+                -webkit-user-select: none;
+                -moz-user-select: none;
+                -ms-user-select: none;
+                user-select: none;
+            }
+            
+            /* 允許必要的文本選擇 */
+            input, textarea {
+                -webkit-user-select: text;
+                -moz-user-select: text;
+                -ms-user-select: text;
+                user-select: text;
+            }
+        }
+        
+        /* 防止移動設備上的縮放 */
+        @media (max-width: 768px) {
+            body {
+                touch-action: manipulation;
+            }
+            
+            #game-canvas {
+                touch-action: none;
+            }
+        }
+        
+        /* 移動設備性能優化 */
+        .mobile-performance-warning {
+            display: none;
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 0, 0, 0.8);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 5px;
+            font-size: 12px;
+            z-index: 10000;
+            max-width: 200px;
+        }
+        
+        .mobile-performance-warning.show {
+            display: block;
         }
         
         /* 載入與選單覆蓋層 */
@@ -505,7 +648,8 @@
 
     let isGameRunning = false;
     let score = 0;
-    let highScore = localStorage.getItem('handGameHighScore') || 0;
+    // 從遊戲進度系統加載最高分
+    let highScore = GameProgress.progress.games.handGame.highScore || 0;
     let lastTime = 0;
     let handDetected = false; // 追蹤手部是否被偵測到
 
@@ -998,6 +1142,167 @@
     // 初始化備用控制系統
     const fallbackControls = new FallbackControls();
 
+    // --- 移動設備優化系統 ---
+    class MobileOptimizer {
+        constructor() {
+            this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            this.isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+            this.isLowEndDevice = this.detectLowEndDevice();
+            this.init();
+        }
+        
+        init() {
+            this.optimizeForMobile();
+            this.addMobileSpecificFeatures();
+            this.preventMobileIssues();
+        }
+        
+        detectLowEndDevice() {
+            // 檢測低端設備
+            const hardwareConcurrency = navigator.hardwareConcurrency || 2;
+            const deviceMemory = navigator.deviceMemory || 4;
+            return hardwareConcurrency < 4 || deviceMemory < 4;
+        }
+        
+        optimizeForMobile() {
+            if (this.isMobile || this.isTouchDevice) {
+                console.log('優化移動設備體驗');
+                
+                // 調整性能設置
+                if (this.isLowEndDevice) {
+                    this.showPerformanceWarning();
+                    this.reduceGraphicsQuality();
+                }
+                
+                // 優化觸摸控制
+                this.optimizeTouchControls();
+            }
+        }
+        
+        showPerformanceWarning() {
+            const warning = document.createElement('div');
+            warning.className = 'mobile-performance-warning';
+            warning.innerHTML = `
+                <strong>性能提示</strong><br>
+                檢測到低端設備，已自動降低畫質以確保流暢體驗。
+            `;
+            document.body.appendChild(warning);
+            
+            setTimeout(() => {
+                warning.classList.add('show');
+            }, 1000);
+            
+            // 5秒後隱藏警告
+            setTimeout(() => {
+                warning.classList.remove('show');
+                setTimeout(() => {
+                    if (warning.parentNode) {
+                        warning.parentNode.removeChild(warning);
+                    }
+                }, 500);
+            }, 5000);
+        }
+        
+        reduceGraphicsQuality() {
+            // 降低圖形質量
+            document.querySelector('.camera-view').style.opacity = '0.1';
+            
+            // 減少粒子數量
+            if (window.performanceOptimizer) {
+                window.performanceOptimizer.qualityLevel = 'low';
+            }
+            
+            // 降低背景效果
+            const backgroundParticles = document.querySelectorAll('.background-particle');
+            backgroundParticles.forEach(p => {
+                if (p.parentNode) {
+                    p.parentNode.removeChild(p);
+                }
+            });
+        }
+        
+        optimizeTouchControls() {
+            // 確保觸摸目標足夠大
+            const buttons = document.querySelectorAll('.btn, .control-option');
+            buttons.forEach(button => {
+                button.style.minHeight = '44px';
+                button.style.minWidth = '44px';
+            });
+            
+            // 添加觸摸反饋
+            this.addTouchFeedback();
+            
+            // 默認選擇觸摸模式
+            const touchRadio = document.querySelector('input[value="touch"]');
+            if (touchRadio && this.isMobile) {
+                touchRadio.checked = true;
+                if (window.fallbackControls) {
+                    window.fallbackControls.setMode('touch');
+                }
+            }
+        }
+        
+        addTouchFeedback() {
+            // 為觸摸元素添加反饋
+            const touchElements = document.querySelectorAll('.btn, .control-option, .d-pad-button');
+            touchElements.forEach(el => {
+                el.addEventListener('touchstart', () => {
+                    el.style.transform = 'scale(0.95)';
+                    el.style.transition = 'transform 0.1s ease';
+                });
+                
+                el.addEventListener('touchend', () => {
+                    el.style.transform = 'scale(1)';
+                });
+                
+                el.addEventListener('touchcancel', () => {
+                    el.style.transform = 'scale(1)';
+                });
+            });
+        }
+        
+        preventMobileIssues() {
+            // 防止雙擊縮放
+            let lastTouchEnd = 0;
+            document.addEventListener('touchend', (e) => {
+                const now = Date.now();
+                if (now - lastTouchEnd <= 300) {
+                    e.preventDefault();
+                }
+                lastTouchEnd = now;
+            }, false);
+            
+            // 防止頁面滾動
+            document.addEventListener('touchmove', (e) => {
+                if (e.target.closest('#game-canvas') || e.target.closest('#game-container')) {
+                    e.preventDefault();
+                }
+            }, { passive: false });
+            
+            // 防止文本選擇
+            document.addEventListener('selectstart', (e) => {
+                if (e.target.closest('#game-container')) {
+                    e.preventDefault();
+                }
+            });
+        }
+        
+        isMobileDevice() {
+            return this.isMobile;
+        }
+        
+        isTouchDevice() {
+            return this.isTouchDevice;
+        }
+        
+        isLowEndDevice() {
+            return this.isLowEndDevice;
+        }
+    }
+    
+    // 初始化移動優化器
+    const mobileOptimizer = new MobileOptimizer();
+    
     // --- 性能優化系統 ---
     class PerformanceOptimizer {
         constructor() {
@@ -1005,7 +1310,7 @@
             this.currentFPS = 60;
             this.fpsHistory = [];
             this.maxHistoryLength = 60;
-            this.qualityLevel = 'high';
+            this.qualityLevel = mobileOptimizer.isLowEndDevice() ? 'medium' : 'high';
             this.lastFrameTime = performance.now();
             this.frameCount = 0;
             this.adaptiveQuality = true;
@@ -1558,12 +1863,16 @@
         
         if (score > highScore) {
             highScore = score;
-            localStorage.setItem('handGameHighScore', highScore);
+            // 使用遊戲進度系統保存最高分
+            GameProgress.updateGestureGameProgress(score);
             highScoreDisplay.innerText = highScore;
         }
 
         gameOverScreen.classList.remove('hidden');
         hud.classList.add('hidden');
+        
+        // 遊戲結束時保存最終進度
+        GameProgress.updateGestureGameProgress(score);
     }
 
     // 成就系統
@@ -1575,8 +1884,9 @@
         }
         
         loadAchievements() {
-            const saved = localStorage.getItem('gestureGameAchievements');
-            if (saved) return JSON.parse(saved);
+            // 從遊戲進度系統加載成就
+            const saved = GameProgress.progress.games.gestureGame.achievements;
+            if (saved && saved.length > 0) return saved;
             
             return [
                 {
@@ -1788,7 +2098,8 @@
         }
         
         saveAchievements() {
-            localStorage.setItem('gestureGameAchievements', JSON.stringify(this.achievements));
+            // 使用遊戲進度系統保存成就
+            GameProgress.updateGestureGameAchievements(this.achievements);
         }
     }
     

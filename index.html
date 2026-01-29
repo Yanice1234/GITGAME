@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>我的遊戲館 - 精選HTML5遊戲</title>
+    <!-- 遊戲進度保存系統 -->
+    <script src="game-progress.js"></script>
+    <!-- 移動設備優化系統 -->
+    <script src="mobile-optimizer.js"></script>
     <style>
         * {
             margin: 0;
@@ -277,7 +281,7 @@
                     <div class="status" id="game-gesture-status">就緒</div>
                 </a>
 
-                <a href="game2.0.enhanced.html" class="game-card">
+                <a href="game2.0.html" class="game-card">
                     <span class="icon">🔢</span>
                     <div class="game-title">2048 增強版</div>
                     <div class="game-description">全新改進的2048遊戲，完整觸控支持、粒子特效和成就系統</div>
@@ -308,28 +312,98 @@
             </div>
 
             <div class="stats">
-                <h2>📊 遊戲統計</h2>
+                <h2>📊 遊戲進度統計</h2>
                 <div class="stats-grid">
                     <div class="stat-item">
-                        <div class="stat-number">3</div>
-                        <div class="stat-label">精選遊戲</div>
+                        <div class="stat-number" id="tetris-highscore">0</div>
+                        <div class="stat-label">俄羅斯方塊最高分</div>
                     </div>
                     <div class="stat-item">
-                        <div class="stat-number">100%</div>
-                        <div class="stat-label">免費遊玩</div>
+                        <div class="stat-number" id="game2048-highscore">0</div>
+                        <div class="stat-label">2048最高分</div>
                     </div>
                     <div class="stat-item">
-                        <div class="stat-number">0</div>
-                        <div class="stat-label">下載等待</div>
+                        <div class="stat-number" id="gesture-highscore">0</div>
+                        <div class="stat-label">星星閃避最高分</div>
                     </div>
                     <div class="stat-item">
-                        <div class="stat-number">24/7</div>
-                        <div class="stat-label">隨時可玩</div>
+                        <div class="stat-number" id="total-achievements">0</div>
+                        <div class="stat-label">總成就數</div>
                     </div>
                 </div>
             </div>
         </main>
     </div>
+
+    <script>
+        // 頁面加載時更新遊戲進度顯示
+        document.addEventListener('DOMContentLoaded', function() {
+            updateGameProgressDisplay();
+        });
+
+        function updateGameProgressDisplay() {
+            // 確保遊戲進度系統已加載
+            if (typeof GameProgress !== 'undefined' && GameProgress.progress) {
+                const progress = GameProgress.progress;
+                
+                // 更新俄羅斯方塊最高分
+                const tetrisHighScore = progress.games.tetris.highScore || 0;
+                document.getElementById('tetris-highscore').textContent = tetrisHighScore;
+                
+                // 更新2048最高分
+                const game2048HighScore = progress.games.game2048.highScore || 0;
+                document.getElementById('game2048-highscore').textContent = game2048HighScore;
+                
+                // 更新星星閃避最高分
+                const gestureHighScore = progress.games.handGame.highScore || 0;
+                document.getElementById('gesture-highscore').textContent = gestureHighScore;
+                
+                // 計算總成就數
+                let totalAchievements = 0;
+                
+                // 計算俄羅斯方塊成就
+                if (progress.games.tetris.achievements) {
+                    totalAchievements += progress.games.tetris.achievements.length;
+                }
+                
+                // 計算2048成就
+                if (progress.games.game2048.achievements) {
+                    totalAchievements += progress.games.game2048.achievements.length;
+                }
+                
+                // 計算星星閃避成就
+                if (progress.games.handGame.achievements) {
+                    totalAchievements += progress.games.handGame.achievements.length;
+                }
+                
+                document.getElementById('total-achievements').textContent = totalAchievements;
+                
+                // 更新遊戲卡片上的狀態
+                updateGameCardStatus(progress);
+            } else {
+                console.warn('遊戲進度系統尚未加載');
+            }
+        }
+
+        function updateGameCardStatus(progress) {
+            // 更新俄羅斯方塊卡片狀態
+            const tetrisStatus = document.getElementById('game-gesture-status');
+            if (tetrisStatus) {
+                const tetrisHighScore = progress.games.tetris.highScore || 0;
+                tetrisStatus.textContent = `最高分: ${tetrisHighScore}`;
+            }
+            
+            // 更新2048卡片狀態
+            const game2048Status = document.getElementById('game2048-status');
+            if (game2048Status) {
+                const game2048HighScore = progress.games.game2048.highScore || 0;
+                game2048Status.textContent = `最高分: ${game2048HighScore}`;
+            }
+        }
+
+        // 定期更新進度顯示（每30秒）
+        setInterval(updateGameProgressDisplay, 30000);
+    </script>
 </body>
 </html>
 

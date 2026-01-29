@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>遊戲進度系統測試</title>
+    <script src="game-progress.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success {
+            color: green;
+            font-weight: bold;
+        }
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+        button {
+            padding: 10px 15px;
+            margin: 5px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            overflow: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>遊戲進度系統測試</h1>
+        
+        <div class="test-section">
+            <h2>1. 系統初始化測試</h2>
+            <button onclick="testInitialization()">測試初始化</button>
+            <div id="init-result"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>2. 遊戲進度更新測試</h2>
+            <button onclick="testTetrisProgress()">測試俄羅斯方塊進度</button>
+            <button onclick="test2048Progress()">測試2048進度</button>
+            <button onclick="testGestureGameProgress()">測試手勢遊戲進度</button>
+            <div id="progress-result"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>3. 進度顯示測試</h2>
+            <button onclick="displayProgress()">顯示當前進度</button>
+            <pre id="progress-display"></pre>
+        </div>
+        
+        <div class="test-section">
+            <h2>4. 舊版數據遷移測試</h2>
+            <button onclick="testLegacyMigration()">測試舊版數據遷移</button>
+            <div id="migration-result"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>5. 重置測試</h2>
+            <button onclick="resetProgress()" style="background: #dc3545;">重置所有進度</button>
+            <div id="reset-result"></div>
+        </div>
+    </div>
+
+    <script>
+        function testInitialization() {
+            try {
+                if (typeof GameProgress !== 'undefined') {
+                    document.getElementById('init-result').innerHTML = 
+                        '<span class="success">✓ 遊戲進度系統已成功加載</span><br>' +
+                        '版本: ' + GameProgress.version + '<br>' +
+                        '最後更新: ' + GameProgress.progress.lastUpdated;
+                } else {
+                    document.getElementById('init-result').innerHTML = 
+                        '<span class="error">✗ 遊戲進度系統未加載</span>';
+                }
+            } catch (error) {
+                document.getElementById('init-result').innerHTML = 
+                    '<span class="error">✗ 初始化測試失敗: ' + error.message + '</span>';
+            }
+        }
+
+        function testTetrisProgress() {
+            try {
+                const oldScore = GameProgress.progress.games.tetris.highScore;
+                GameProgress.updateTetrisProgress(1000, 50, 2, 5);
+                const newScore = GameProgress.progress.games.tetris.highScore;
+                
+                document.getElementById('progress-result').innerHTML = 
+                    '<span class="success">✓ 俄羅斯方塊進度更新成功</span><br>' +
+                    '舊最高分: ' + oldScore + '<br>' +
+                    '新最高分: ' + newScore + '<br>' +
+                    '總遊戲數: ' + GameProgress.progress.games.tetris.gamesPlayed;
+            } catch (error) {
+                document.getElementById('progress-result').innerHTML = 
+                    '<span class="error">✗ 俄羅斯方塊進度測試失敗: ' + error.message + '</span>';
+            }
+        }
+
+        function test2048Progress() {
+            try {
+                const oldScore = GameProgress.progress.games.game2048.highScore;
+                GameProgress.update2048Progress(5000, 30, 2048);
+                const newScore = GameProgress.progress.games.game2048.highScore;
+                
+                document.getElementById('progress-result').innerHTML = 
+                    '<span class="success">✓ 2048進度更新成功</span><br>' +
+                    '舊最高分: ' + oldScore + '<br>' +
+                    '新最高分: ' + newScore + '<br>' +
+                    '最佳方塊: ' + GameProgress.progress.games.game2048.bestTile;
+            } catch (error) {
+                document.getElementById('progress-result').innerHTML = 
+                    '<span class="error">✗ 2048進度測試失敗: ' + error.message + '</span>';
+            }
+        }
+
+        function testGestureGameProgress() {
+            try {
+                const oldScore = GameProgress.progress.games.handGame.highScore;
+                GameProgress.updateGestureGameProgress(300);
+                const newScore = GameProgress.progress.games.handGame.highScore;
+                
+                document.getElementById('progress-result').innerHTML = 
+                    '<span class="success">✓ 手勢遊戲進度更新成功</span><br>' +
+                    '舊最高分: ' + oldScore + '<br>' +
+                    '新最高分: ' + newScore + '<br>' +
+                    '總遊戲數: ' + GameProgress.progress.games.handGame.gamesPlayed;
+            } catch (error) {
+                document.getElementById('progress-result').innerHTML = 
+                    '<span class="error">✗ 手勢遊戲進度測試失敗: ' + error.message + '</span>';
+            }
+        }
+
+        function displayProgress() {
+            try {
+                const progress = GameProgress.progress;
+                document.getElementById('progress-display').textContent = 
+                    JSON.stringify(progress, null, 2);
+            } catch (error) {
+                document.getElementById('progress-display').textContent = 
+                    '顯示進度失敗: ' + error.message;
+            }
+        }
+
+        function testLegacyMigration() {
+            try {
+                // 設置一些舊版數據
+                localStorage.setItem('tetrisHighScore', '1500');
+                localStorage.setItem('bestScore2048', '8000');
+                localStorage.setItem('handGameHighScore', '450');
+                
+                // 執行遷移
+                GameProgress.legacySupport.migrateAllLegacyScores();
+                
+                document.getElementById('migration-result').innerHTML = 
+                    '<span class="success">✓ 舊版數據遷移測試完成</span><br>' +
+                    '請檢查控制台查看遷移日誌';
+            } catch (error) {
+                document.getElementById('migration-result').innerHTML = 
+                    '<span class="error">✗ 遷移測試失敗: ' + error.message + '</span>';
+            }
+        }
+
+        function resetProgress() {
+            try {
+                GameProgress.resetGameProgress('all');
+                document.getElementById('reset-result').innerHTML = 
+                    '<span class="success">✓ 所有遊戲進度已重置</span>';
+            } catch (error) {
+                document.getElementById('reset-result').innerHTML = 
+                    '<span class="error">✗ 重置失敗: ' + error.message + '</span>';
+            }
+        }
+
+        // 頁面加載時自動運行初始化測試
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(testInitialization, 500);
+        });
+    </script>
+</body>
+</html>
